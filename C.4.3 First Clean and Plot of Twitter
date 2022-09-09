@@ -1,0 +1,360 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+
+#--------------------------------------------------------
+#Explore and Cleaning time
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter")
+df <- read_csv("TwitterforCleaningFile.csv")
+
+#drop unecessary columns
+str(df)
+New <- select(df, -c(...1, source,user_created_at, tweet_id,user_created_at,user_list_count,user_verified,possibly_sensitive,conversation_id,user_pinned_tweet_id,user_profile_image_url,user_url,user_description,sourcetweet_lang,sourcetweet_type,sourcetweet_id))
+#possibly_sensitive = This new field will only surface when a tweet contains a link.
+#The meaning of the field doesn’t pertain to the tweet content itself,
+#but instead it is an indicator that the URL contained in the tweet may contain content or media identified as sensitive content.
+#SourceTweet is the quote-tweeted Tweet
+#user_verified -> if FALSE, then 246,165 gone of 270,468
+#missing value for name removed for potential demographic correction
+
+#look into language
+unique(New$lang)
+sum(New$lang == "en")
+#270369
+#get only english ones
+Fixlang <- New[New$lang == "en",]
+#99 removed
+unique(Fixlang$lang)
+
+# check NA data numbers per column
+sapply(Fixlang , function(x) sum(is.na(x)))
+#in_reply_to_user_id = 173506
+#user_location = 35289
+#sourcetweet_text = 242656
+#sourcetweet_author_id = 242656
+#user_name = 14
+#a lot of sourceTweet missing values -> think this means the tweet was a quotetweet to smth
+#like title and text in Reddit submissions, replace NA with empty, then merge. but do later
+# two datasets -> one with quoteTweets, one without
+#242656 are NOT quote Tweets,242656/270369 = 0.8974993, so almost 90% not replies, but 10 do reply to something. do I keep these?
+
+#look at user_location
+unique(Fixlang$user_location)
+#this is a modifier feature on Twitter
+#profile location is part of your public account profile and is completely optional
+#we can drop this
+FixLocation <- select(Fixlang, -c(user_location,user_protected))
+sapply(FixLocation , function(x) sum(is.na(x)))
+
+#in_reply_to_user_id 173,506
+#173506/270369 = 0.6417378, 64% were not replies to other tweets
+#make it into a boolean column perhaps?
+#or look into a new dataframe? Nah we only have User ID not Tweet ID, so just change to Boolean for now
+FixLocation$in_reply_to_user_id <- as.character(FixLocation$in_reply_to_user_id)
+FixLocation$in_reply_to_user_id[!is.na(FixLocation$in_reply_to_user_id)] <- "True"
+FixLocation$in_reply_to_user_id <- FixLocation$in_reply_to_user_id %>% replace_na("False")
+#see if work
+unique(FixLocation$in_reply_to_user_id)
+sum(FixLocation$in_reply_to_user_id == "False")
+#173506, so same as NA value!
+
+sapply(FixLocation , function(x) sum(is.na(x)))
+nrow(FixLocation)
+#270369
+#username missing for 14
+UsernameOk <- FixLocation[!is.na(FixLocation$user_name),] 
+nrow(UsernameOk)
+#270355
+#we can remove sourcetweet_author_id cus we do not care about author ID
+FileFix <- select(UsernameOk, -c(sourcetweet_author_id))
+
+#now check for duplicates
+sum(duplicated(FileFix))
+#0
+sapply(FileFix , function(x) sum(is.na(x)))
+#sourcetweet_text left at 242,642 - this left for last when split data into with and without source
+summary(FileFix)
+#created_at shows correct date range
+#retweet_count min and median of 0, mean of 2.89, max of 34298
+#like_count min 0, median 1, mean 16.49, max is 150805.00
+#quote_count min 0, median 0, mean 0.415, max is 14436.000
+#user_tweet_count min 1, median 14553, mean 43714, max is 3896611
+#user_followers_count min 0, median 877, mean 5161, max is 2871841
+#user_following_count min 0, median 1016, mean 2525, max is 581826
+#who follows 581826 people 
+x <- FileFix[FileFix$user_following_count == 581826,]
+#appears to be normal account
+#-------------------
+#explore user_name
+#-------------------
+tweetUsernacount <- FileFix %>% 
+  count(user_name)
+#Eli Klein 1304
+#Heerak Christian Kim for US Congress (Virginia-8  1199
+#Covid Genie 1164
+#-------------------
+#explore author_id
+#-------------------
+tweetAuthorIDnacount <- FileFix %>% 
+  count(author_id)
+#most occur 1304
+str(FileFix)
+#-------------------
+#explore retweet_count
+#-------------------
+plot(FileFix$retweet_count)
+#- less than 50 outliers above 200(?)
+#- heavy skew to 0, so appears to be civilian accounts
+#- (not faous people who get re-tweeted a lot)
+#- examine oulier\
+max(FileFix$retweet_count)
+#34298
+x <- FileFix[FileFix$retweet_count == 34298,]
+#tweet about not getting vaccinated affecting others
+x1 <- FileFix[FileFix$retweet_count > 5000,]
+#18, muxh pro-vaccine related
+#-------------------
+#explore like_count
+#-------------------
+plot(FileFix$like_count)
+#-few about 50k
+#-heavy skew to 0, so appears to be civilian accounts
+#-
+max(FileFix$like_count)
+#150,805
+x <- FileFix[FileFix$like_count > 50000,]
+# 7, normal messages but by accounts with high following
+#-------------------
+#explore quote_count
+#-------------------
+plot(FileFix$quote_count)
+#- few above 5k (only one tbh)
+#- most neat 0
+max(FileFix$quote_count)
+# 14436
+x2 <- FileFix[FileFix$quote_count >1000 ,]
+#10, high number of followers
+#-------------------
+#explore user_followers_count
+#-------------------
+plot(FileFix$user_followers_count)
+#- bigger spread than any, most under 500k
+max(FileFix$user_followers_count)
+# 2871841
+x3 <- FileFix[FileFix$user_followers_count > 500000 ,]
+# 115, regular tweets just high amount of followers
+#-------------------
+#explore user_following_count
+#-------------------
+plot(FileFix$user_following_count)
+#-big spread, most under 30k
+#-
+max(FileFix$user_following_count)
+#2871841
+x <- FileFix[FileFix$user_following_count > 30000,]
+#1295, famous people
+str(FileFix)
+#-------------------
+#explore text
+#-------------------
+# convert all to lower case
+FileFix$text <- tolower(FileFix$text)
+#check length of text
+FileFix$text <- as.character(FileFix$text)
+FileFix$lengthtext <- nchar(FileFix$text)
+summary(FileFix)
+# min of lengthtext is 13.0
+# max is 1003.0
+# mean is 196.8
+# median 198.0
+lengthexplore <- FileFix %>% 
+  count(lengthtext)
+# most frequent is 280 length at 3451
+#examine lower messages
+checklength <- FileFix[FileFix$lengthtext <100,]
+#while short, does appear to be sentiment unlike Reddit
+
+#check for bot messages potentially
+bot1 <- FileFix[grepl(' bot ', FileFix$text),]
+nrow(bot1)
+#25, 25/270355 = 9.247101e, is a fraction and do not appear to be bots.
+bot2 <- FileFix[grepl('bot[[:punct:]]+', FileFix$text),]
+nrow(bot2)
+#47, not bots think reddit
+
+bot3 <- FileFix[grepl("I'm a bot", FileFix$text),]
+nrow(bot3)
+#0
+bot4 <- FileFix[grepl("I am a bot", FileFix$text),]
+nrow(bot4)
+#0
+automod <- FileFix[grepl("AUTOMOD", FileFix$text),]
+nrow(automod)
+#0
+
+#------------------------------
+#check if any posts removed
+x <- FileFix[grepl(' remove ', FileFix$text),]
+nrow(x)
+#196, fraction , appear to be normal posts
+
+#check if any posts removed
+x1 <- FileFix[grepl('removed', FileFix$text),]
+nrow(x1)
+#200
+
+#check if any posts removed
+x <- FileFix[grepl(' delete ', FileFix$text),]
+nrow(x)
+#29, fraction , appear to be normal posts
+
+#check if any posts removed
+x1 <- FileFix[grepl('deleted', FileFix$text),]
+nrow(x1)
+#56
+#due to better parameters, probably better posts
+#------------------------------
+str(FileFix)
+#-------------------
+#explore user_username
+#-------------------
+FileFix$user_username <- tolower(FileFix$user_username)
+#-------------------
+userusrename <- FileFix %>% 
+  count(user_username)
+# appear to be normal usernames
+#theeliklein 1304
+#heerak4congress 1199 etc.
+
+#check for bots and autoaccounts
+bot1 <- FileFix[grepl('bot', FileFix$user_username),]
+nrow(bot1)
+#241, some bots some not
+Nobot1 <- FileFix[!grepl('bot', FileFix$user_username),]
+nrow(Nobot1)
+#270114
+ajto1 <- Nobot1[grepl('auto', Nobot1$user_username),]
+nrow(ajto1)
+#43some automated some not
+Noaut <- Nobot1[!grepl('auto', Nobot1$user_username),]
+nrow(Noaut)
+#270071
+#-------------------
+#explore user_tweet_count, bots might have high count
+#-------------------
+tweetcountt <- Noaut %>% 
+  count(user_tweet_count)
+#most occur 
+#1167 tweets 1179
+#20593 tweets 799
+#
+plot(Noaut$user_tweet_count)
+#a line around 4 mil and 2 mil. explore:? maybe bots?
+high4 <- Noaut[Noaut$user_tweet_count >2000000,]
+tweetcountt2 <- high4 %>% 
+  count(user_username)
+#mainly dogandwinelover, so perhaps a bot 214
+high1 <- Noaut[Noaut$user_tweet_count >1000000,]
+tweetcountt3 <- high1 %>% 
+  count(user_username)
+#evankirstel at 187
+# remove all above a mill
+NoBots <- Noaut[Noaut$user_tweet_count <1000000,]
+nrow(NoBots)
+#269478
+plot(NoBots$user_tweet_count)
+#better spread
+
+str(NoBots)
+#save one without sourceTweetText, so just remove the column and save as csv
+sapply(NoBots , function(x) sum(is.na(x)))
+#sourcetweet_text=241824 so 241824/269478 = .8973794, almost 11 percent
+NoSourceTweet <- select(NoBots, -c(sourcetweet_text))
+sapply(NoSourceTweet , function(x) sum(is.na(x)))
+nrow(NoSourceTweet)
+#269,478
+write_csv(NoSourceTweet, file = "NoSourceTweetsClean.csv")
+
+#now with sourceTweets
+#first make all NA in sourcetweet_text a space
+NoBots$sourcetweet_text[is.na(NoBots$sourcetweet_text)] <- ""
+sapply(NoBots , function(x) sum(is.na(x)))
+#done
+NoBots$Combine <- paste(NoBots$text,NoBots$sourcetweet_text)
+sapply(NoBots , function(x) sum(is.na(x)))
+nrow(NoBots)
+#269,478
+WithSourceTweet <- select(NoBots, -c(sourcetweet_text, text))
+nrow(WithSourceTweet)
+sapply(WithSourceTweet , function(x) sum(is.na(x)))
+#269,478
+write_csv(WithSourceTweet, file = "YesSourceTweetsClean.csv")
+
+
+#examine weekly frequency
+df <- NoSourceTweet %>%
+  group_by(TimeSR) %>%
+  summarise(counts = n()) 
+
+#save this count
+write_csv(df, file = "WeeklyTwitterPostsCLean.csv")
+
+
+#------------------------------
+
+#--------------------------------------------------------
+#START PLOTTING THIS
+#--------------------------------------------------------
+library("ggplot2")
+#add index as week
+df$week <- 1:nrow(df)
+#plot
+ggplot(df,                            # Draw ggplot2 time series plot
+       aes(x = week,
+           y = counts)) +
+  geom_line()+
+  xlab("Week")+
+  ylab("Number of Twitter Posts")
+
+
+#very low value early 2021
+min(df$counts)
+#622
+max(df$counts)
+#9689
+#--------------------------------------------------------
+#Compare created at and TimeSR plots
+#--------------------------------------------------------
+
+library("reshape2")
+NoSourceTweet$week <- as.Date(NoSourceTweet$created_at,format="%Y-%V" )
+
+#examine daily frequency
+df2 <- NoSourceTweet %>%
+  group_by(week) %>%
+  summarise(counts = n()) 
+
+#reshape data
+data_long2 <- melt(df2, id.vars = "week") 
+
+#plot
+ggplot(data_long2,                            # Draw ggplot2 time series plot
+       aes(x = week,
+           y = value)) +
+  geom_line()+
+  xlab("Days")+
+  ylab("Number of Twitter Posts")
+
+#very low value early 2021
+min(df2$counts)
+#64
+max(df2$counts)
+#1721
+
+
+
+
+
+

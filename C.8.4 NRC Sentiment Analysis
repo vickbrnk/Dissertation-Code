@@ -1,0 +1,353 @@
+library(tidytext)
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+library(data.table)
+library(textdata)
+library(remotes)
+#--------------------------------------------------------
+#nrc lexicon time
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("FinalSourceTweet.csv")
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+library(lexicon)
+#due to constant error, read it in manually or achieve through other package
+lex2 <- hash_sentiment_nrc
+lextest2 <- lex2 %>%
+  rename(word = x, sentiment = y)
+
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Nrc",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply nrc lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(lextest2, by = "word")%>%
+    group_by(ID) %>% 
+    mutate(
+      nrc_words =  n(),
+      nrc_score = sum(sentiment)) %>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    mutate(nrc_words = ifelse(is.na(nrc_words), 0, nrc_words),
+              nrc_score = ifelse(is.na(nrc_score), 0, nrc_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(nrc_words = mean(nrc_words),
+              nrc_score = mean(nrc_score)) 
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$nrc_score/scored_df3$nrc_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(nrc_score,nrc_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+write_csv(df3, "nrcYessource.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tq_nrc_NoEm = mean(nrcNOemojiTxt),
+            Tq_nrc_Em = mean(nrcEmojiText),
+            Tq_nrc_LemEm= mean(nrcLemEmojitxt),
+            Tq_nrc_LemNoEm= mean(nrcLemNOEmojitxt),
+            Tq_nrc_StemEm = mean(nrcStemEmojitxt),
+            Tq_nrc_StemNoEm = mean(nrcStemNOEmojitxt))
+
+#--------------------------------------------------------
+#Tnq
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("FinalNONOSourceTweet.csv")
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+library(lexicon)
+#due to constant error, read it in manually or achieve through other package
+lex2 <- hash_sentiment_nrc
+lextest2 <- lex2 %>%
+  rename(word = x, sentiment = y)
+
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Nrc",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply nrc lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(lextest2, by = "word")%>%
+    group_by(ID) %>% 
+    mutate(
+      nrc_words =  n(),
+      nrc_score = sum(sentiment)) %>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    mutate(nrc_words = ifelse(is.na(nrc_words), 0, nrc_words),
+           nrc_score = ifelse(is.na(nrc_score), 0, nrc_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(nrc_words = mean(nrc_words),
+              nrc_score = mean(nrc_score)) 
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$nrc_score/scored_df3$nrc_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(nrc_score,nrc_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+write_csv(df3, "nrcNOsource.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tnq_nrc_NoEm = mean(NrcNOemojiTxt),
+            Tnq_nrc_Em = mean(NrcEmojiText),
+            Tnq_nrc_LemEm= mean(NrcLemEmojitxt),
+            Tnq_nrc_LemNoEm= mean(NrcLemNOEmojitxt),
+            Tnq_nrc_StemEm = mean(NrcStemEmojitxt),
+            Tnq_nrc_StemNoEm = mean(NrcStemNOEmojitxt))
+
+#--------------------------------------------------------
+#Rs
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("FinalRedditSubmissions.csv")
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+library(lexicon)
+#due to constant error, read it in manually or achieve through other package
+lex2 <- hash_sentiment_nrc
+lextest2 <- lex2 %>%
+  rename(word = x, sentiment = y)
+
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Nrc",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply nrc lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(lextest2, by = "word")%>%
+    group_by(ID) %>% 
+    mutate(
+      nrc_words =  n(),
+      nrc_score = sum(sentiment)) %>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    mutate(nrc_words = ifelse(is.na(nrc_words), 0, nrc_words),
+           nrc_score = ifelse(is.na(nrc_score), 0, nrc_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(nrc_words = mean(nrc_words),
+              nrc_score = mean(nrc_score)) 
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$nrc_score/scored_df3$nrc_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(nrc_score,nrc_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+write_csv(df3, "nrcRs.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tnq_nrc_NoEm = mean(nrcNOemojiTxt),
+            Tnq_nrc_Em = mean(nrcEmojiText),
+            Tnq_nrc_LemEm= mean(nrcLemEmojitxt),
+            Tnq_nrc_LemNoEm= mean(nrcLemNOEmojitxt),
+            Tnq_nrc_StemEm = mean(nrcStemEmojitxt),
+            Tnq_nrc_StemNoEm = mean(nrcStemNOEmojitxt))
+
+
+
+#--------------------------------------------------------
+#RCOMMENTS
+
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df4 <- read_csv("FinalRedditCommentsPrep.csv")
+df3 <- select(df4, c(NOemojiTxt,EmojiText,LemEmojitxt,LemNOEmojitxt,StemEmojitxt,StemNOEmojitxt, score, TimeSR) )
+df5 <- select(df3, -c(StemEmojitxt))
+#assign index for id
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+
+library(lexicon)
+#due to constant error, read it in manually or achieve through other package
+lex2 <- hash_sentiment_nrc
+lextest2 <- lex2 %>%
+  rename(word = x, sentiment = y)
+
+
+#loop and apply lexicon
+list_columns = list(c("NOemojiTxt"),c("EmojiText"),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Nrc",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply nrc lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(lextest2, by = "word")%>%
+    group_by(ID) %>% 
+    mutate(
+      nrc_words =  n(),
+      nrc_score = sum(sentiment)) %>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    mutate(nrc_words = ifelse(is.na(nrc_words), 0, nrc_words),
+           nrc_score = ifelse(is.na(nrc_score), 0, nrc_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(nrc_words = mean(nrc_words),
+              nrc_score = mean(nrc_score)) 
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$nrc_score/scored_df3$nrc_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(nrc_score,nrc_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+total <- merge(df3, df5, by = "ID")
+sapply(total , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+write_csv(total, "nrcRsComments.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tnq_nrc_NoEm = mean(nrcNOemojiTxt),
+            Tnq_nrc_Em = mean(nrcEmojiText),
+            Tnq_nrc_LemEm= mean(nrcLemEmojitxt),
+            Tnq_nrc_LemNoEm= mean(nrcLemNOEmojitxt),
+            Tnq_nrc_StemEm = mean(nrcStemEmojitxt),
+            Tnq_nrc_StemNoEm = mean(nrcStemNOEmojitxt))
+

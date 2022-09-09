@@ -1,0 +1,65 @@
+!pip install psaw
+!pip install jsonlines
+!pip install pandas
+
+#import everything
+import psaw
+import pandas as pd
+from psaw import PushshiftAPI
+import datetime as dt
+import os
+
+
+#loop
+os.chdir('/content/drive/MyDrive/Reddit')
+#read in
+dates = pd.read_csv('MondaysandMondays.csv')
+api = PushshiftAPI()
+
+#initialise all variables
+covidterms1 = '(corona|covid-19|sars-cov-2|coronavirus|pandemic|coronaviruses|(corona virus))'
+covidterms2 = '((corona viruses)|(coronavirus infections)|(corona virus infections)|(severe acute respiratory syndrome coronavirus)|(severe acute respiratory syndrome corona virus)|(SARS CoV-2)|cov2)'
+covidterms3 = '((sars 2)|covid|(coronavirus 2)|(corona virus 2)|covid19|nCov|(new coronavirus))'
+covidterms4 = '((new corona virus)|(novel coronavirus)|(novel corona virus)|coronaviruspandemic|2019ncov|coronaoutbreak|wuhanvirus)'
+termsofVaccination='+(vacc|vaccinate|vaccine|vaccinate|vaccinated|vaccinating|vaccines|vaccinates|vax|vaccine|vaccination|vaccinations|vaccine|immune|immunisation|immunise|immunising|immunisations|immunises|immunised|immunization|immunizations|immunize|immunized|immunizes|immunizing)-([removed])'
+
+
+querySub1 = covidterms1+termsofVaccination
+querySub2 = covidterms2+termsofVaccination
+querySub3 = covidterms3+termsofVaccination
+querySub4 = covidterms4+termsofVaccination
+
+#loop
+os.chdir('/content/drive/MyDrive/Reddit')
+#get length data
+row_count = len(dates)
+#initialise all variables
+queryComments = ''
+TimeSR = dates['TimeSR']
+yearMon = dates['RedyearMon']
+monthMon = dates['RedmonthMon']
+dayMon = dates['ReddayMon']
+NextyearMon = dates['RedyearMonNext']
+NextmonthMon = dates['RedmonthMonNext']
+NextdayMon = dates['ReddayMonNext']
+
+#loop submissions
+for i in range(row_count):
+    #get the dates ready
+    Yearbefore = int(yearMon.loc[i])
+    Monthbefore = int(monthMon.loc[i])
+    Daybefore = int(dayMon.loc[i])
+    NextYearbefore = int(NextyearMon.loc[i])
+    NextMonthbefore = int(NextmonthMon.loc[i])
+    NextDaybefore = int(NextdayMon.loc[i])
+    before = int(dt.datetime(NextYearbefore,NextMonthbefore,NextDaybefore).timestamp())
+    after = int(dt.datetime(Yearbefore,Monthbefore,Daybefore).timestamp())
+
+    #search Reddit
+    comments = api.search_comments(q=querySub2,limit=50000, before=before, after=after,filter=['author','link_id','id','title', 'subreddit', 'subreddit_subscribers','score','num_comments','body','created'])
+    comments_df = pd.DataFrame(comments)
+    print('Retrieved', len(comments_df), 'comments from Pushshift')
+    name = str(TimeSR.loc[i])+".csv"
+    os.chdir('/content/drive/MyDrive/Query2')
+    comments_df.to_csv(name, header=True)
+    

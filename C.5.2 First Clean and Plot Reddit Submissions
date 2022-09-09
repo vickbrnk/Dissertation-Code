@@ -1,0 +1,498 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+
+#--------------------------------------------------------
+#Explore and Cleaning time
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+df <- read_csv("SubmissionsFinalCleaningFile.csv")
+nrow(df)
+# 1259745
+
+#drop unecessary columns
+str(df)
+New <- select(df, -c(X, ...1, d_, created))
+
+#convert the dates
+library(anytime)
+New$DateCreated <- anytime(New$created_utc)
+New2 <- select(New, -c(created_utc))
+
+# check NA data numbers per column
+sapply(New2 , function(x) sum(is.na(x)))
+#score 2
+#selftext = 822167
+#subreddit = 4
+#subreddit_subscribers = 212
+#title = 4
+
+#get rid of NA of subreddit_subscribers
+FixSubs <- New2[!is.na(New2$subreddit_subscribers),]
+sapply(FixSubs , function(x) sum(is.na(x)))
+nrow(FixSubs)
+nrow(New2)
+#no missing values, went from  1259745 to 1259533, 212 gone
+#selft text missing values will be dealt with when merged
+
+#check duplicates
+sum(duplicated(FixSubs))
+#443024, 443024/1259533 = 0.3517367, 35%decrease
+
+#remove
+NoDuplicates <-FixSubs %>% distinct()
+nrow(NoDuplicates)
+#816,509
+
+#lets explore every column
+str(NoDuplicates)
+summary(NoDuplicates)
+#score avg of 3.31, median of 1, max 66004.00
+#num_comments avg 0f 14.28, median of 0, max of 17064.00
+
+#-----------------------------
+#explore score
+#-----------------------------
+plot(NoDuplicates$score)
+
+#a small number of outliers above 10k, no more thsn 100
+#skewing towards 0 but that
+#is expectedwith  a median of 1 and mean of 3.31,
+#-----------------------------
+#explore num_comments
+#-----------------------------
+plot(NoDuplicates$num_comments)
+
+#bigger spread than score, a small number of outliers above 5, skewing towards 0 but that
+#is expectedwith  a median of 0 and mean of 14.28
+#-----------------------------
+#explore subreddit 
+#automated subs are made by bots, while comments on these are by people, the subs are not
+#therefore remove anything with bot, news and auto -> these are not opinons but rather objective statements
+#-----------------------------
+#convert lowercase
+NoDuplicates$subreddit <- tolower(NoDuplicates$subreddit)
+#-----------------------------
+countsub <- NoDuplicates %>% 
+  count(subreddit)
+view(countsub)
+#first get rid of auto and bot subs and news
+#AutoNewspaper at 29,202
+Auto <- NoDuplicates[grepl('auto', NoDuplicates$subreddit),]
+nrow(Auto)
+# 68,733,
+countauto <- Auto %>% 
+  count(subreddit)
+# subs like autotldr, autonewspaper etc bbc auto
+NoAuto <- NoDuplicates[!grepl('auto', NoDuplicates$subreddit),]
+nrow(NoAuto)
+#747,776
+Bot <- NoAuto[grepl('bot', NoAuto$subreddit),]
+nrow(Bot)
+# 10775, 
+countbot <- Bot %>% 
+  count(subreddit)
+# newbotbot, uknewsbyabot, bottown2 etc.
+NoBot <- NoAuto[!grepl('bot', NoAuto$subreddit),]
+nrow(NoBot)
+#737,001
+News <- NoBot[grepl('news', NoBot$subreddit),]
+nrow(News)
+#182121 , explore
+countnews <- News %>% 
+  count(subreddit)
+# check top 50, remove foreign news
+#108898 u_toronto_news, 
+#uknews 760
+#newsoftheuk 702
+#theworldnews 443
+#sydneynews 401
+#ontarionews 256
+NoNews <-NoBot[!(NoBot$subreddit == "u_toronto_news"|NoBot$subreddit == "uknews"|NoBot$subreddit == "newsoftheuk"|NoBot$subreddit == "theworldnews"|NoBot$subreddit == "sydneynews"|NoBot$subreddit == "ontarionews"),]
+nrow(NoNews)
+#625541
+
+#which one most frequent
+countsub1 <- NoNews %>% 
+  count(subreddit)
+
+#remove non US from top 50
+#covid_canada 10103
+#worldnews 6402
+#ontario 2923
+#coronavirusdownunder 4968
+#canadacoronavirus 2760
+
+#coronavirusuk 2355
+#europe 1949
+#india 1862
+#ukpolitics 1750
+#canada 1647
+
+Try <- NoNews[!(NoNews$subreddit == "covid_canada"|NoNews$subreddit == "worldnews"|NoNews$subreddit == "ontario"|NoNews$subreddit == "coronavirusdownunder"|NoNews$subreddit == "canadacoronavirus"),]
+nrow(Try)
+#625541-10103-4968-6402-2923-2760 =598385
+Try2 <- Try[!(Try$subreddit == "coronavirusuk"|Try$subreddit == "europe"|Try$subreddit == "india"|Try$subreddit == "ukpolitics"|Try$subreddit == "canada" ),]
+nrow(Try2)
+#598385-1750-1647-1862-1949- 2355= 588822
+
+#reduction of 588822/816509 = 0.7211458, almost 28% decrease
+str(Try2)
+#-----------------------------
+#explore author
+#-----------------------------
+countauthor <- Try2 %>% 
+  count(author)
+view(countauthor)
+#which one most frequent
+#ImmaChallenger 4088
+#AutoModerator at 3976
+#[deleted] 4134
+#reddit_feed_bot 6071
+#-----------------------------
+# convert all to lower case
+Try2$author <- tolower(Try2$author)
+
+#lets remove these
+check <- Try2[grepl('auto', Try2$author),]
+nrow(check)
+#check 4182 
+countauto1 <- check %>% 
+  count(author)
+#mostly automoderator 
+x <- Try2[!grepl('auto', Try2$author),]
+nrow(x)
+#584640
+
+check1 <- x[grepl('bot', x$author),]
+nrow(check1)
+#check - 17217
+countauto1 <- check1 %>% 
+  count(author)
+#reddit_feed_bot at 6071, newsbot_ etc
+x2 <- x[!grepl('bot', x$author),]
+nrow(x2)
+# 567423
+
+check2 <- x2[grepl('delete', x2$author),]
+nrow(check2)
+#check - 4191  - 	
+countdel <- check2 %>% 
+  count(author)
+#[deleted] mostly 4134
+x3 <- x2[!grepl('delete', x2$author),]
+nrow(x3)
+# 563232
+
+check3 <- x3[grepl('remove', x3$author),]
+nrow(check3)
+#check - 25
+countdel <- check3 %>% 
+  count(author)
+# removed acc
+x4 <- x3[!grepl('remove', x3$author),]
+nrow(x4)
+# 563207
+
+str(x4)
+#total reduction  563207/588822 =0.9564979, almost 5% reduction
+#next but safe first
+sapply(x4 , function(x) sum(is.na(x)))
+write_csv(x4, file = "CleanAuthornSubs.csv")
+x4 <- read_csv("CleanAuthornSubs.csv")
+#-----------------------------
+#clean text
+#-----------------------------
+#FIRST
+#combine selftext and title
+#first make all NA in selftext a space
+x4$selftext[is.na(x4$selftext)] <- ""
+sapply(x4 , function(x) sum(is.na(x)))
+#done
+x4$Combine <- paste(x4$title,x4$selftext)
+sapply(x4 , function(x) sum(is.na(x)))
+
+#new subset
+NoNAReddit <-select(x4, -c(selftext,title))
+sapply(NoNAReddit , function(x) sum(is.na(x)))
+nrow(NoNAReddit)
+#563,207 of 9 variables.
+#------------------------------
+# convert all to lower case
+NoNAReddit$Combine <- tolower(NoNAReddit$Combine)
+#check length of text
+NoNAReddit$Combine <- as.character(NoNAReddit$Combine)
+NoNAReddit$lengthtext <- nchar(NoNAReddit$Combine)
+summary(NoNAReddit)
+# min of lengthtext is 10
+# max is 43033
+# mean is 954.6
+# median 217.0
+#1st q is  86.0
+countlength <- NoNAReddit %>% 
+  count(lengthtext)
+view(countlength)
+# 62 length occurs 4723
+# see what type of messages are small
+triallength <- NoNAReddit[NoNAReddit$lengthtext<50,]
+nrow(triallength)
+# 13,184 obs
+# appears to be simply titles "when will you get covid vaccine"
+triallength2 <- NoNAReddit[NoNAReddit$lengthtext<100,]
+nrow(triallength2)
+#186428
+# appear more post like
+#let this rest for pre-processing
+#------------------------------ADD SPACE and/or period at end
+#remove bot posts, bots tend to announce in a comment that they are bots
+Bots <- NoNAReddit[grepl("i am a bot", NoNAReddit$Combine),]
+nrow(Bots)
+#324
+#check if any "i'm a bot" left
+Bots2 <- NoNAReddit[grepl("i'm a bot", NoNAReddit$Combine),]
+nrow(Bots2)
+#78
+#remove these
+NoBots <- NoNAReddit[!grepl("i'm a bot", NoNAReddit$Combine),]
+nrow(NoBots)
+#563,129
+NoBots2 <- NoBots[!grepl('i am a bot', NoBots$Combine),]
+nrow(NoBots2)
+#562,805
+
+#explore other options of bots being present
+Bots3 <- NoBots2[grepl(' bot ', NoBots2$Combine),]
+nrow(Bots3)
+# 290
+NoBots3 <- NoBots2[!grepl(' bot ', NoBots2$Combine),]
+nrow(NoBots3)
+#now 562515
+
+
+#check bot with various punctuation
+Bots4 <- NoBots3[grepl("bot[[:punct:]]+", NoBots3$Combine),]
+nrow(Bots4)
+# 383
+NoBots4 <- NoBots3[!grepl('bot[[:punct:]]+', NoBots3$Combine),]
+nrow(NoBots4)
+#now 562132
+# 
+#percentage bots removed   562132/563207 = 0.9980913, almost 1%
+#-------- onto Auto
+#remove AUTOMOD posts
+mod1 <- NoBots4[grepl('automod', NoBots4$Combine),]
+nrow(mod1)
+# 51
+#remove these
+NoAutoMod<- NoBots4[!grepl('automod', NoBots4$Combine),]
+nrow(NoAutoMod)
+# 562081
+
+nrow(NoAutoMod)
+#save so far at 562081
+sapply(NoAutoMod , function(x) sum(is.na(x)))
+write_csv(NoAutoMod, file = "NobotsorAutmodinText.csv")
+
+NoAutoMod <- read_csv("NobotsorAutmodinText.csv")
+str(NoAutoMod)
+summary(NoAutoMod)
+sapply(NoAutoMod , function(x) sum(is.na(x)))
+#continue here.
+#------------------------------
+#check if any posts removed
+checkremove <- NoAutoMod[grepl('remove', NoAutoMod$Combine),]
+nrow(checkremove)
+#2933, 2933/562081 - 0.005218109  it is 0.5% should I maybe just delete it?
+#check what kind of posts, some normal convo- others seem reposted deleted posts
+New <- NoAutoMod[!grepl('remove', NoAutoMod$Combine),]
+nrow(New)
+#now 559148
+
+#check if any posts removed
+checkremoved <- New[grepl('removed', New$Combine),]
+nrow(checkremoved)
+#0
+
+#check if any posts removed
+noDeleted <- New[grepl('delete', New$Combine),]
+nrow(noDeleted)
+#2247,  2247/559148 = 0.00401861403, is about 0.4%
+#subset this to see content,  some appear deleted/edited reposted
+New2 <- New[!grepl('delete', New$Combine),]
+nrow(New2)
+#now 556901
+
+x3 <- New2[grepl('deleted', New2$Combine),]
+nrow(x3)
+#0
+
+nrow(New2)
+#now at 556901
+# total decrease = 556901/562081 =0.99078424639, almost 1% decrease
+str(New2)
+#-----------------------------
+#explore id
+#-----------------------------
+#------------------------------
+countid <- New2 %>% 
+  count(id)
+summary(countid)
+#almost all occur once, with maybe a handful occuring twice
+#-----------------------------
+#explore subreddit_subscribers
+#-----------------------------
+countidsubsc <- New2 %>% 
+  count(subreddit_subscribers)
+
+#29872 have 0 subs
+#3956 have 1 
+#2243 have 2
+summary(countidsubsc)
+#some mean is 2.183 and median is 1 with a max of 29872.000 which is 0 subs
+#subscriber wise mean is 2552676a nd median 308471
+#explore low numbers of subs
+lowsubs <- New2[New2$subreddit_subscribers<3,]
+#subreddits are u_usersname
+#search
+usernameSUbs <- New2[grepl('u_', New2$subreddit),]
+nrow(usernameSUbs)
+#28677
+#some messages appear multiple times so perhaps these are bots?
+NousernameSubs <- New2[!grepl('u_', New2$subreddit),]
+nrow(NousernameSubs)
+#528224
+#retry subscibrers
+countidsubsc2 <- NousernameSubs %>% 
+  count(subreddit_subscribers)
+# high numbers for low subs
+#1253 of 0
+#3947 of 1
+#2236 of 2
+lowsubs2 <- NousernameSubs[NousernameSubs$subreddit_subscribers<3,]
+nrow(lowsubs2)
+#7436
+#appear to be individuals posting for themselves or test bots,  remove
+Nolowsubs <- NousernameSubs[NousernameSubs$subreddit_subscribers>3,]
+nrow(Nolowsubs)
+#519196
+#reduction 519196/556901 =0.932295, almost 7%
+str(Nolowsubs)
+#------------------------------
+#check subreddits once more
+#-----------------------------
+cousujb <- Nolowsubs %>% 
+  count(subreddit)
+#look at top 50/60
+#newzealand at 1303
+#vancouver 1285
+#ireland 1249
+#alberta 1208
+#ottawa 1192
+Neww <- Nolowsubs[!(Nolowsubs$subreddit == "newzealand"|Nolowsubs$subreddit == "vancouver"|Nolowsubs$subreddit == "ireland"|Nolowsubs$subreddit == "alberta"|Nolowsubs$subreddit == "ottawa"),]
+nrow(Neww)
+#now 512959
+#-----------------------------
+#explore author once more
+#-----------------------------
+countauthor2 <- Neww %>% 
+  count(author)
+summary(countauthor2)
+#mean at 2.407 and median 1, max 4462.000 of swagnexttuber,nofeenews
+x <- Neww[Neww$author == "swagnexttuber",]
+x1 <- Neww[Neww$author == "nofeenews",]
+#seems mainly news
+str(Neww)
+nrow(Neww)
+sum(duplicated(Neww))
+#save so far at Neww 512959
+#reduction of 512959/1259745 = 0.4071927, 0.5928073 so 59% reduction
+sapply(Neww , function(x) sum(is.na(x)))
+write_csv(Neww, file = "CleanRedditSubmissions.csv")
+
+#examine weekly frequency
+df <- Neww %>%
+  group_by(TimeSR) %>%
+  summarise(counts = n()) 
+
+#save this count
+write_csv(df, file = "CountWeeklyRedditSubmissionsCLean.csv")
+
+#--------------------------------------------------------
+#START PLOTTING THIS
+#---------------------------------------------------------
+library("ggplot2")
+#add index as week
+df$week <- 1:nrow(df)
+#plot
+ggplot(df,                            # Draw ggplot2 time series plot
+       aes(x = week,
+           y = counts)) +
+  geom_line()+
+  xlab("Week")+
+  ylab("Number of Submissions Reddit")
+
+
+#very low value early 2021
+min(df$counts)
+#1297
+max(df$counts)
+#16085
+#--------------------------------------------------------
+#Compare created at and TimeSR plots
+#--------------------------------------------------------
+library("reshape2")
+Neww$week <- as.Date(Neww$DateCreated,format="%Y-%V" )
+
+#examine daily frequency
+df2 <- Neww %>%
+  group_by(week) %>%
+  summarise(counts = n()) 
+
+#reshape data
+data_long2 <- melt(df2, id.vars = "week") 
+
+#plot
+ggplot(data_long2,                            # Draw ggplot2 time series plot
+       aes(x = week,
+           y = value)) +
+  geom_line()+
+  xlab("Days")+
+  ylab("Number of Submissions Reddit")
+
+#very low value early 2021
+min(df2$counts)
+#10
+max(df2$counts)
+#9
+
+
+
+#--------------------------------------------------------
+#Consider taking pulling comments belonging to post
+#--------------------------------------------------------
+#check
+whichcomments <- Neww[Neww$num_comments>0,]
+mean(Neww$num_comments)
+max(Neww$num_comments)
+# 313498 have comments (that's more than half), with an average of 17.495, a max of 17064
+#therefore, set the max limit to 20k, or loop???
+#regardless, save this file to potentially loop
+#save this count
+write_csv(whichcomments, file = "SubmissionswithCommetnsID.csv")
+
+#how many less than 1000 comments if average is 18
+whichcommentunder1000 <- whichcomments[whichcomments$num_comments<1000,]
+nrow(whichcommentunder1000)
+#312812
+#save this count
+write_csv(whichcommentunder1000, file = "SubmissionswithComUNDER1000.csv")
+
+#how many more than 1000 comments if average is 18
+whichcommentover1000 <- whichcomments[whichcomments$num_comments>1000,]
+nrow(whichcommentover1000)
+#683, max is 10,226 so 12k max
+#save this count
+write_csv(whichcommentover1000, file = "SubmissionswithComOVER1000.csv")
+
+

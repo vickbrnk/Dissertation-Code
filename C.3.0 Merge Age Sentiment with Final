@@ -1,0 +1,48 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(foreign)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys")
+df <- read.csv("FinalAllSurveysDetails.csv")
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios")
+df2 <- read.csv("Until30Sentiment.csv")
+df2$AXIOSyd29 <- df2$Sentiment
+merge1 <- select(df2, c(Wave, AXIOSyd29))
+
+df3 <- read.csv("Until45Sentiment.csv")
+df3$AXIOSyd44 <- df3$Sentiment
+merge2 <- select(df3, c(Wave, AXIOSyd44))
+
+#merge them
+total <- merge(df, merge1, by = "Wave")
+total2 <- merge(total, merge2, by = "Wave")
+
+write.csv(total2, file = "SurveysSentimentwAxios.csv")
+#--------------------------------------------------------
+#add HPS
+#--------------------------------------------------------
+
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(foreign)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/HPS/")
+df <- read.csv("to40AllHPSwSentiment.csv")
+new <- select(df, c(HPSyd39, week,HPSyd25))
+new$HPSWeek <- gsub(".xlsx","",new$week)
+new$HPSWeek <- gsub("health5_week","",new$HPSWeek)
+new$HPSWeek <- gsub("health5a_week","",new$HPSWeek)
+
+new2 <- select(new, c(HPSyd39, HPSWeek,HPSyd25))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/")
+df2 <- read.csv("SurveysSentimentwAxios.csv")
+
+#merge
+total <- merge(df2, new2, by = "HPSWeek")
+total2 <- select(total, -c(X, X.1))
+write.csv(total2, file = "AllSentiment.csv")

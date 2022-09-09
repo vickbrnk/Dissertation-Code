@@ -1,0 +1,258 @@
+library(tidytext)
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+library(data.table)
+#--------------------------------------------------------
+#AFINN lexicon time
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("TxtBlbYesSource.csv")
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+lex <- get_sentiments("afinn")
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Afinn",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply afinn lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(get_sentiments("afinn"), by="word")  %>% 
+    mutate(sentiment = value) %>% 
+    group_by(ID) %>% 
+    mutate(
+      afinn_words =  n(),
+      afinn_score = sum(sentiment))%>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    group_by(ID)  %>% 
+    mutate(afinn_words = ifelse(is.na(afinn_words), 0, afinn_words),
+              afinn_score = ifelse(is.na(afinn_score), 0, afinn_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(afinn_words = mean(afinn_words),
+              afinn_score = mean(afinn_score)) 
+  
+  #correction for words being able to be 5 or -5 to -1 and 1 values 
+  scored_df3$afinn_score <- scored_df3$afinn_score*0.2
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$afinn_score/scored_df3$afinn_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(afinn_score,afinn_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/afinn")
+write_csv(df3, "afinnYessource.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tq_afinn_NoEm = mean(AfinnNOemojiTxt),
+            Tq_afinn_Em = mean(AfinnEmojiText),
+            Tq_afinn_LemEm= mean(AfinnLemEmojitxt),
+            Tq_afinn_LemNoEm= mean(AfinnLemNOEmojitxt),
+            Tq_afinn_StemEm = mean(AfinnStemEmojitxt),
+            Tq_afinn_StemNoEm = mean(AfinnStemNOEmojitxt))
+
+
+#--------------------------------------------------------
+#Nosource tweets
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("TxtBlbNOSource.csv")
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Afinn",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply afinn lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(get_sentiments("afinn"), by="word")  %>% 
+    mutate(sentiment = value) %>% 
+    group_by(ID) %>% 
+    mutate(
+      afinn_words =  n(),
+      afinn_score = sum(sentiment))%>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    group_by(ID)  %>% 
+    mutate(afinn_words = ifelse(is.na(afinn_words), 0, afinn_words),
+              afinn_score = ifelse(is.na(afinn_score), 0, afinn_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(afinn_words = mean(afinn_words),
+              afinn_score = mean(afinn_score)) 
+  
+  #correction for words being able to be 5 or -5 to -1 and 1 values 
+  scored_df3$afinn_score <- scored_df3$afinn_score*0.2
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$afinn_score/scored_df3$afinn_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(afinn_score,afinn_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/afinn")
+write_csv(df3, "afinnNOsource.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tq_afinn_NoEm = mean(AfinnNOemojiTxt),
+            Tq_afinn_Em = mean(AfinnEmojiText),
+            Tq_afinn_LemEm= mean(AfinnLemEmojitxt),
+            Tq_afinn_LemNoEm= mean(AfinnLemNOEmojitxt),
+            Tq_afinn_StemEm = mean(AfinnStemEmojitxt),
+            Tq_afinn_StemNoEm = mean(AfinnStemNOEmojitxt))
+
+
+#--------------------------------------------------------
+#REDDIT SUBMISSIONS
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+df3 <- read_csv("TxtBlbSUbmissions.csv")
+
+#initialise garbage collection
+gc()
+
+#assign index for id
+df3$ID <- 1:nrow(df3) 
+
+#loop and apply lexicon
+list_columns = list(c('NOemojiTxt'),c('EmojiText'),c('LemEmojitxt'),c('LemNOEmojitxt'),c('StemEmojitxt'),c('StemNOEmojitxt'))
+for(i in list_columns){
+  #Name column
+  Namedf1 <- paste("Afinn",i,sep="")
+  
+  df3$forLex <- df3[[i]]
+  
+  #apply afinn lexicon
+  scored_df <- df3 %>% 
+    unnest_tokens(word, forLex) %>% 
+    inner_join(get_sentiments("afinn"), by="word")  %>% 
+    mutate(sentiment = value) %>% 
+    group_by(ID) %>% 
+    mutate(
+      afinn_words =  n(),
+      afinn_score = sum(sentiment))%>% 
+    select(-sentiment) %>% 
+    select(-word) %>% 
+    right_join(df3) %>% 
+    group_by(ID)  %>% 
+    mutate(afinn_words = ifelse(is.na(afinn_words), 0, afinn_words),
+              afinn_score = ifelse(is.na(afinn_score), 0, afinn_score)) 
+  #missing values check
+  print(sapply(scored_df , function(x) sum(is.na(x))))
+  # 0 
+  
+  #summarise
+  scored_df3 <- scored_df  %>% 
+    group_by(ID)  %>% 
+    summarise(afinn_words = mean(afinn_words),
+              afinn_score = mean(afinn_score)) 
+  
+  #correction for words being able to be 5 or -5 to -1 and 1 values 
+  scored_df3$afinn_score <- scored_df3$afinn_score*0.2
+  
+  #calculate sentiment
+  scored_df3$test <- scored_df3$afinn_score/scored_df3$afinn_words
+  #missing values check
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #some missing values because of division by 0
+  
+  #if division by 0, just set neutral post as 0
+  scored_df3$test[is.na(scored_df3$test)] <- 0
+  #missing values check 
+  print(sapply(scored_df3 , function(x) sum(is.na(x))))
+  #
+  
+  scored_df3[paste(Namedf1)] <-  scored_df3$test
+  #remove help columns
+  scored_df4 <- select(scored_df3, -c(afinn_score,afinn_words, test))
+  #merge
+  df3 <- merge(df3, scored_df4, by = "ID")
+}
+
+sapply(df3 , function(x) sum(is.na(x)))
+#no missing values!
+
+#set wd and save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/afinn")
+write_csv(df3, "afinnSUBMISSIONS.csv")
+
+# summarise
+dfSentiment <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(Tq_afinn_NoEm = mean(AfinnNOemojiTxt),
+            Tq_afinn_Em = mean(AfinnEmojiText),
+            Tq_afinn_LemEm= mean(AfinnLemEmojitxt),
+            Tq_afinn_LemNoEm= mean(AfinnLemNOEmojitxt),
+            Tq_afinn_StemEm = mean(AfinnStemEmojitxt),
+            Tq_afinn_StemNoEm = mean(AfinnStemNOEmojitxt))
+
+

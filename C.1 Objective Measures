@@ -1,0 +1,413 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Objective Measures")
+#read in data
+COV <- read.csv("owid-covid-data.csv")
+summary(COV)
+str(COV)
+#select the US
+USA <- COV[COV$iso_code == "USA", ]  
+
+write.csv(USA, file = "USAOthersource.csv")
+
+str(USA)
+#select 
+df <- select(USA, c(iso_code,date,total_cases,new_cases,new_cases_smoothed,total_deaths,new_deaths,new_deaths_smoothed,icu_patients,icu_patients_per_million,hosp_patients,hosp_patients_per_million,total_tests,new_tests,positive_rate,total_vaccinations,new_vaccinations,new_vaccinations_smoothed))
+
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+df$DateCopy <- df$date
+df$DateCopy <- as.Date(df$DateCopy,"%Y-%m-%d")
+df$Year <- format(df$DateCopy,"%G")
+df$week <- format(df$DateCopy,"%V")
+
+#save this subset too, to be safe
+write.csv(df, file = "FUSAOthersource.csv")
+
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+#how many years
+unique(df$Year)
+#three years, 2022 2021 2020
+#separate these:
+USVaccs2020 <- df[df$Year == 2020, ]  
+USVaccs2021 <- df[df$Year == 2021, ] 
+USVaccs2022 <- df[df$Year == 2022, ] 
+
+#--------------------2020
+#take the doses a week, this is a cumulative, keep this in mind
+USVaccs2020Fin <- USVaccs2020 %>%
+  group_by(week) %>%
+  mutate(WKLCovidCases = max(total_cases),
+         WKLnew_cases = sum(new_cases),
+         WKLnew_cases_smoothed = sum(new_cases_smoothed),
+         WKLtotal_deaths = max(total_deaths),
+         WKLnew_deaths = sum(new_deaths),
+         WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+         WKLicu_patients = mean(icu_patients),
+         WKLicu_patients_per_million = mean(icu_patients_per_million),
+         WKLhosp_patients = mean(hosp_patients),
+         WKLhosp_patients_per_million = mean(hosp_patients_per_million),
+         WKLtotal_tests = max(total_tests),
+         WKLnew_tests = sum(new_tests),
+         WKLpositive_rate = mean(positive_rate),
+         WKLtotal_vaccinations = max(total_vaccinations),
+         WKLnew_vaccinations = sum(new_vaccinations),
+         WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed),
+         WKLStringency_Index = mean(stringency_index)
+         ) %>% 
+  ungroup()
+
+#create a column for Year.Week
+USVaccs2020Fin$TimeSR <- paste(USVaccs2020Fin$Year, USVaccs2020Fin$week, sep = ".")
+# subset
+USVaccs2020WKL <- select(USVaccs2020Fin, c(TimeSR,WKLCovidCases,
+                                           WKLnew_cases,
+                                           WKLnew_cases_smoothed,
+                                           WKLtotal_deaths,
+                                           WKLnew_deaths,
+                                           WKLnew_deaths_smoothed,
+                                           WKLicu_patients,
+                                           WKLicu_patients_per_million ,
+                                           WKLhosp_patients ,
+                                           WKLhosp_patients_per_million ,
+                                           WKLtotal_tests,
+                                           WKLnew_tests,
+                                           WKLpositive_rate ,
+                                           WKLtotal_vaccinations ,
+                                           WKLnew_vaccinations ,
+                                           WKLnew_vaccinations_smoothed,
+                                           WKLStringency_Index))
+VaccUs2020FinalWKL <- USVaccs2020WKL %>% distinct()
+#--------------------------------------
+#quick NA and duplicate check and plot
+sum(duplicated(VaccUs2020FinalWKL))
+sapply(VaccUs2020FinalWKL , function(x) sum(is.na(x)))
+#some NA values, none starting week 2020.51
+# select this timeframe
+VaccUs2020FinalWKL2 <- VaccUs2020FinalWKL[VaccUs2020FinalWKL$TimeSR >= 2020.51, ]  
+
+#plot
+plot(VaccUs2020FinalWKL$TimeSR, VaccUs2020FinalWKL$WKLCovidCases)
+
+#--------------------------------------
+
+#--------------------2021
+#take the doses a week, this is a cumulative, keep this in mind
+USVaccs2021Fin <- USVaccs2021 %>%
+  group_by(week) %>%
+  mutate(WKLCovidCases = max(total_cases),
+         WKLnew_cases = sum(new_cases),
+         WKLnew_cases_smoothed = sum(new_cases_smoothed),
+         WKLtotal_deaths = max(total_deaths),
+         WKLnew_deaths = sum(new_deaths),
+         WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+         WKLicu_patients = mean(icu_patients),
+         WKLicu_patients_per_million = mean(icu_patients_per_million),
+         WKLhosp_patients = mean(hosp_patients),
+         WKLhosp_patients_per_million = mean(hosp_patients_per_million),
+         WKLtotal_tests = max(total_tests),
+         WKLnew_tests = sum(new_tests),
+         WKLpositive_rate = mean(positive_rate),
+         WKLtotal_vaccinations = max(total_vaccinations),
+         WKLnew_vaccinations = sum(new_vaccinations),
+         WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed),
+        WKLStringency_Index = mean(stringency_index)
+  ) %>% 
+  ungroup()
+
+#create a column for Year.Week
+USVaccs2021Fin$TimeSR <- paste(USVaccs2021Fin$Year, USVaccs2021Fin$week, sep = ".")
+# subset
+USVaccs2021WKL <- select(USVaccs2021Fin, c(TimeSR,WKLCovidCases,
+                                           WKLnew_cases,
+                                           WKLnew_cases_smoothed,
+                                           WKLtotal_deaths,
+                                           WKLnew_deaths,
+                                           WKLnew_deaths_smoothed,
+                                           WKLicu_patients,
+                                           WKLicu_patients_per_million ,
+                                           WKLhosp_patients ,
+                                           WKLhosp_patients_per_million ,
+                                           WKLtotal_tests,
+                                           WKLnew_tests,
+                                           WKLpositive_rate ,
+                                           WKLtotal_vaccinations ,
+                                           WKLnew_vaccinations ,
+                                           WKLnew_vaccinations_smoothed,
+                                           WKLStringency_Index))
+VaccUs2021FinalWKL <- USVaccs2021WKL %>% distinct()
+#--------------------------------------
+#quick NA and duplicate check and plot
+
+sum(duplicated(VaccUs2021FinalWKL))
+sapply(VaccUs2021FinalWKL , function(x) sum(is.na(x)))
+#no NA or duplicates
+plot(VaccUs2021FinalWKL$TimeSR, VaccUs2021FinalWKL$WKLCovidCases)
+plot(VaccUs2021FinalWKL$TimeSR, VaccUs2021FinalWKL$WKLpositive_rate)
+plot(VaccUs2021FinalWKL$TimeSR, VaccUs2021FinalWKL$WKLnew_vaccinations_smoothed)
+plot(VaccUs2021FinalWKL$TimeSR, VaccUs2021FinalWKL$WKLtotal_vaccinations)
+#--------------------------------------
+#--------------------2022
+#take the doses a week, this is a cumulative, keep this in mind
+USVaccs2022Fin <- USVaccs2022 %>%
+  group_by(week) %>%
+  mutate(WKLCovidCases = max(total_cases),
+         WKLnew_cases = sum(new_cases),
+         WKLnew_cases_smoothed = sum(new_cases_smoothed),
+         WKLtotal_deaths = max(total_deaths),
+         WKLnew_deaths = sum(new_deaths),
+         WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+         WKLicu_patients = mean(icu_patients),
+         WKLicu_patients_per_million = mean(icu_patients_per_million),
+         WKLhosp_patients = mean(hosp_patients),
+         WKLhosp_patients_per_million = mean(hosp_patients_per_million),
+         WKLtotal_tests = max(total_tests),
+         WKLnew_tests = sum(new_tests),
+         WKLpositive_rate = mean(positive_rate),
+         WKLtotal_vaccinations = max(total_vaccinations),
+         WKLnew_vaccinations = sum(new_vaccinations),
+         WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed,
+         WKLStringency_Index = mean(stringency_index))
+  ) %>% 
+  ungroup()
+
+#create a column for Year.Week
+USVaccs2022Fin$TimeSR <- paste(USVaccs2022Fin$Year, USVaccs2022Fin$week, sep = ".")
+# subset
+USVaccs2022WKL <- select(USVaccs2022Fin, c(TimeSR,WKLCovidCases,
+                                           WKLnew_cases,
+                                           WKLnew_cases_smoothed,
+                                           WKLtotal_deaths,
+                                           WKLnew_deaths,
+                                           WKLnew_deaths_smoothed,
+                                           WKLicu_patients,
+                                           WKLicu_patients_per_million ,
+                                           WKLhosp_patients ,
+                                           WKLhosp_patients_per_million ,
+                                           WKLtotal_tests,
+                                           WKLnew_tests,
+                                           WKLpositive_rate ,
+                                           WKLtotal_vaccinations ,
+                                           WKLnew_vaccinations ,
+                                           WKLnew_vaccinations_smoothed,
+                                           WKLStringency_Index))
+VaccUs2022FinalWKL <- USVaccs2022WKL %>% distinct()
+#--------------------------------------
+#quick NA and duplicate check and plot
+
+sum(duplicated(VaccUs2022FinalWKL))
+sapply(VaccUs2022FinalWKL , function(x) sum(is.na(x)))
+#no duplicates, some NA, everything ok up until 2022.22
+# select this timeframe
+VaccUs2022FinalWKL2 <- VaccUs2022FinalWKL[VaccUs2022FinalWKL$TimeSR <= 2022.22, ] 
+
+#plot
+
+plot(VaccUs2022FinalWKL2$TimeSR, VaccUs2022FinalWKL2$WKLCovidCases)
+plot(VaccUs2022FinalWKL2$TimeSR, VaccUs2022FinalWKL2$WKLpositive_rate)
+plot(VaccUs2022FinalWKL2$TimeSR, VaccUs2022FinalWKL2$WKLnew_vaccinations_smoothed)
+plot(VaccUs2022FinalWKL2$TimeSR, VaccUs2022FinalWKL2$WKLtotal_vaccinations)
+
+#--------------------------------------
+
+#--------------------------------------
+#merge these together and check, then save
+#----------------------------------
+
+total <- rbind(VaccUs2020FinalWKL2,VaccUs2021FinalWKL,VaccUs2022FinalWKL2)
+#quick NA and duplicate check and plot
+sum(duplicated(total))
+sapply(total , function(x) sum(is.na(x)))
+#no NA no duplicate
+#plot
+
+plot(total$TimeSR, total$WKLCovidCases)
+plot(total$TimeSR, total$WKLpositive_rate)
+plot(total$TimeSR, total$WKLnew_vaccinations_smoothed)
+plot(total$TimeSR, total$WKLtotal_vaccinations)
+
+#--------------------------------------
+write.csv(total, file = "AllWeeksObjMeasuresUSA.csv")
+
+#--------------------------------------
+
+#--------------------------------------
+#EVERYTHING THE SAME BUT WITH SMOOTHED
+#----------------------------------
+#check which smoothed
+dfSMOOTHED <- select(USA, contains("smoothed"))
+#select the smoothed
+dfSmooth1 <- select(USA, c(stringency_index,iso_code,date,hosp_patients,icu_patients,positive_rate,new_cases_smoothed,new_deaths_smoothed,new_tests_smoothed,new_vaccinations_smoothed,new_people_vaccinated_smoothed))
+sapply(dfSmooth1 , function(x) sum(is.na(x)))
+#we have NAs, see if this can be resolved by doing the dates first
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+dfSmooth1$DateCopy <- dfSmooth1$date
+dfSmooth1$DateCopy <- as.Date(dfSmooth1$DateCopy,"%Y-%m-%d")
+dfSmooth1$Year <- format(dfSmooth1$DateCopy,"%G")
+dfSmooth1$week <- format(dfSmooth1$DateCopy,"%V")
+
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+#how many years
+unique(dfSmooth1$Year)
+#three years, 2022 2021 2020
+#separate these:
+USVaccs2020Smooth <- dfSmooth1[dfSmooth1$Year == 2020, ]  
+USVaccs2021Smooth <- dfSmooth1[dfSmooth1$Year == 2021, ] 
+USVaccs2022Smooth <- dfSmooth1[dfSmooth1$Year == 2022, ] 
+#create a column for Year.Week
+USVaccs2020Smooth$TimeSR <- paste(USVaccs2020Smooth$Year, USVaccs2020Smooth$week, sep = ".")
+USVaccs2021Smooth$TimeSR <- paste(USVaccs2021Smooth$Year, USVaccs2021Smooth$week, sep = ".")
+USVaccs2022Smooth$TimeSR <- paste(USVaccs2022Smooth$Year, USVaccs2022Smooth$week, sep = ".")
+
+# snap the weeks accordingly as done before smooth
+#some NA values, none starting week 2020.51
+# select this timeframe
+USVaccs2020Smooth <- USVaccs2020Smooth[USVaccs2020Smooth$TimeSR >= 2020.51, ]  
+#no duplicates, some NA, everything ok up until 2022.22
+# select this timeframe
+USVaccs2022Smooth <- USVaccs2022Smooth[USVaccs2022Smooth$TimeSR <= 2022.22, ] 
+#check NA
+sapply(USVaccs2020Smooth , function(x) sum(is.na(x)))
+sapply(USVaccs2021Smooth , function(x) sum(is.na(x)))
+sapply(USVaccs2022Smooth , function(x) sum(is.na(x)))
+#All zero!
+#--------------------2020
+USVaccs2020FinSmooth <- USVaccs2020Smooth %>%
+  group_by(week) %>%
+  mutate(
+         WKLnew_cases_smoothed = sum(new_cases_smoothed),
+         WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+         WKLnew_tests_smoothed = sum(new_tests_smoothed),
+         WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed),
+         WKLnew_people_vaccinated_smoothed = sum(new_people_vaccinated_smoothed),
+         WKLhosp_patients = mean(hosp_patients),
+         WKLpositive_rate = mean(positive_rate),
+         WKLicu_patients = mean(icu_patients),
+         WKLStringency_Index = mean(stringency_index)
+  ) %>% 
+  ungroup()
+
+# subset
+USVaccs2020WKLSmooth <- select(USVaccs2020FinSmooth, c(TimeSR,
+                                                       WKLnew_cases_smoothed,
+                                                       WKLnew_deaths_smoothed,
+                                                       WKLnew_tests_smoothed,
+                                                       WKLnew_vaccinations_smoothed,
+                                                       WKLnew_people_vaccinated_smoothed,
+                                                       WKLhosp_patients,
+                                                       WKLpositive_rate,
+                                                       WKLicu_patients,
+                                                       WKLStringency_Index))
+USVaccs2020WKLSmooth <- USVaccs2020WKLSmooth %>% distinct()
+#--------------------------------------
+#quick NA and duplicate check and plot
+sum(duplicated(USVaccs2020WKLSmooth))
+sapply(USVaccs2020WKLSmooth , function(x) sum(is.na(x)))
+#plot
+plot(USVaccs2020WKLSmooth$TimeSR, USVaccs2020WKLSmooth$WKLnew_deaths_smoothed)
+
+
+#--------------------------------------
+
+#--------------------2021
+#take the doses a week, this is a cumulative, keep this in mind
+USVaccs2021FinSmooth <- USVaccs2021Smooth %>%
+  group_by(week) %>%
+  mutate(
+    WKLnew_cases_smoothed = sum(new_cases_smoothed),
+    WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+    WKLnew_tests_smoothed = sum(new_tests_smoothed),
+    WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed),
+    WKLnew_people_vaccinated_smoothed = sum(new_people_vaccinated_smoothed),
+    WKLhosp_patients = mean(hosp_patients),
+    WKLpositive_rate = mean(positive_rate),
+    WKLicu_patients = mean(icu_patients),
+    WKLStringency_Index = mean(stringency_index)
+  ) %>% 
+  ungroup()
+
+# subset
+USVaccs2021WKLSmooth <- select(USVaccs2021FinSmooth, c(TimeSR,
+                                                       WKLnew_cases_smoothed,
+                                                       WKLnew_deaths_smoothed,
+                                                       WKLnew_tests_smoothed,
+                                                       WKLnew_vaccinations_smoothed,
+                                                       WKLnew_people_vaccinated_smoothed,
+                                                       WKLhosp_patients,
+                                                       WKLpositive_rate,
+                                                       WKLicu_patients,
+                                                       WKLStringency_Index))
+USVaccs2021WKLSmooth <- USVaccs2021WKLSmooth %>% distinct()
+#--------------------------------------
+#quick NA and duplicate check and plot
+sum(duplicated(USVaccs2021WKLSmooth))
+sapply(USVaccs2021WKLSmooth , function(x) sum(is.na(x)))
+#no NA or duplicates
+plot(USVaccs2021WKLSmooth$TimeSR, USVaccs2021WKLSmooth$WKLnew_vaccinations_smoothed)
+
+#--------------------------------------
+#--------------------2022
+#take the doses a week, this is a cumulative, keep this in mind
+USVaccs2022FinSmooth <- USVaccs2022Smooth %>%
+  group_by(week) %>%
+  mutate(
+    WKLnew_cases_smoothed = sum(new_cases_smoothed),
+    WKLnew_deaths_smoothed = sum(new_deaths_smoothed),
+    WKLnew_tests_smoothed = sum(new_tests_smoothed),
+    WKLnew_vaccinations_smoothed = sum(new_vaccinations_smoothed),
+    WKLnew_people_vaccinated_smoothed = sum(new_people_vaccinated_smoothed),
+    WKLhosp_patients = mean(hosp_patients),
+    WKLpositive_rate = mean(positive_rate),
+    WKLicu_patients = mean(icu_patients),
+    WKLStringency_Index = mean(stringency_index)
+  ) %>% 
+  ungroup()
+
+# subset
+USVaccs2022WKLSmooth <- select(USVaccs2022FinSmooth, c(TimeSR,
+                                                       WKLnew_cases_smoothed,
+                                                       WKLnew_deaths_smoothed,
+                                                       WKLnew_tests_smoothed,
+                                                       WKLnew_vaccinations_smoothed,
+                                                       WKLnew_people_vaccinated_smoothed,
+                                                       WKLhosp_patients,
+                                                       WKLpositive_rate,
+                                                       WKLicu_patients,
+                                                       WKLStringency_Index))
+USVaccs2022WKLSmooth <- USVaccs2022WKLSmooth %>% distinct()
+#quick NA and duplicate check and plot
+
+sum(duplicated(USVaccs2022WKLSmooth))
+sapply(USVaccs2022WKLSmooth , function(x) sum(is.na(x)))
+#plot
+plot(USVaccs2022WKLSmooth$TimeSR, USVaccs2022WKLSmooth$WKLnew_vaccinations_smoothed)
+
+#--------------------------------------
+
+#--------------------------------------
+#merge these together and check, then save
+#----------------------------------
+
+totalSmooth <- rbind(USVaccs2022WKLSmooth,USVaccs2021WKLSmooth,USVaccs2020WKLSmooth)
+#quick NA and duplicate check and plot
+sum(duplicated(totalSmooth))
+sapply(totalSmooth , function(x) sum(is.na(x)))
+#no NA no duplicate
+#plot
+
+plot(totalSmooth$TimeSR, totalSmooth$WKLnew_vaccinations_smoothed)
+
+
+#--------------------------------------
+write.csv(totalSmooth, file = "USASmoothObject.csv")
+

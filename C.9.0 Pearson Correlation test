@@ -1,0 +1,872 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+#--------------------------------------------------------
+#Comparison Surveys against SMD
+#--------------------------------------------------------
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Tq
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#HPSSentimentTotal
+#AxiosSentimentTotal
+#AXIOSyd29
+#AXIOSyd44
+#HPSyd39
+#HPSyd25
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in SentimentList){
+#5 files with 12 options each, so dataframe should have 60
+for (i in seq_along(files)) {
+  filename = files[[i]]
+  # Read data in
+  df <- read.csv(filename, header = TRUE)
+  #create list for loop
+  LoopDf <- df[2:13]
+  my_list2 <- colnames(LoopDf)
+  k = 1
+  for (x in my_list2){
+    df$corr <- LoopDf[[x]]
+    Sentiment$corr <- Sentiment[[A]]
+    
+    #pearson correlation
+    res <- cor.test(Sentiment$corr, df$corr, 
+                    method = "pearson")
+  
+    #save pbale, coeff, degrees of free dom, t test stat
+    pv <- res$p.value
+    corr <- res$estimate
+    dff <- res$parameter
+    ttest <- res$statistic[1]
+    
+    #paste values
+    pvalues[[k]] <- paste(pv)
+    correlations[[k]] <- paste(corr)
+    freesomdeg[[k]] <- paste(dff)
+    tstatistics[[k]] <- paste(ttest)
+    filename[[k]] <- paste(x)
+    surveyname[[k]] <- paste(A)
+    k = k+1
+  }
+  
+  test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+  
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge)
+}
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "TqCoefficients.csv")
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Tnq
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#HPSSentimentTotal
+#AxiosSentimentTotal
+#AXIOSyd29
+#AXIOSyd44
+#HPSyd39
+#HPSyd25
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in SentimentList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      Sentiment$corr <- Sentiment[[A]]
+      
+      #pearson correlation
+      res <- cor.test(Sentiment$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "TnqCoefficients.csv")
+
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Rs
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#HPSSentimentTotal
+#AxiosSentimentTotal
+#AXIOSyd29
+#AXIOSyd44
+#HPSyd39
+#HPSyd25
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in SentimentList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      Sentiment$corr <- Sentiment[[A]]
+      
+      #pearson correlation
+      res <- cor.test(Sentiment$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "RsCoefficients.csv")
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Rc
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#HPSSentimentTotal
+#AxiosSentimentTotal
+#AXIOSyd29
+#AXIOSyd44
+#HPSyd39
+#HPSyd25
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in SentimentList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      Sentiment$corr <- Sentiment[[A]]
+      
+      #pearson correlation
+      res <- cor.test(Sentiment$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "RcCoefficients.csv")
+
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+
+#--------------------------------------------------------
+#SURVEYS AND SURVEYS
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#HPSSentimentTotal
+#AxiosSentimentTotal
+#AXIOSyd29
+#AXIOSyd44
+#HPSyd39
+#HPSyd25
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(6))
+correlations <- vector("list", "length" = length(6))
+freesomdeg <- vector("list", "length" = length(6))
+tstatistics <- vector("list", "length" = length(6))
+filename <- vector("list", "length" = length(6))
+surveyname <- vector("list", "length" = length(6))
+
+#6 survey versions times 60 other options is 360
+for (A in SentimentList){
+    my_list2 <- colnames(LoopSent)
+    k = 1
+    for (x in my_list2){
+      Sentiment$corr2 <- LoopSent[[x]]
+      Sentiment$corr <- Sentiment[[A]]
+      
+      #pearson correlation
+      res <- cor.test(Sentiment$corr, Sentiment$corr2, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "SurveyCoefficients.csv")
+#--------------------------------------------------------
+#SMD against SMD
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs", pattern = "*.csv")
+
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+files3 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+files4 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+
+#12*5 smd versions is 48 times 5*12 = 60  final options is 3600, Rc against Rc
+for (A in files4){
+  setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+  # Read data in
+  df1 <- read.csv(A, header = TRUE)
+  #create list for loop
+  LoopDf1 <- df1[2:13]
+  my_list21 <- colnames(LoopDf1)
+  
+  for (h in my_list21){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files4)) {
+    setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+    filename = files4[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      df1$corr <- LoopDf1[[h]]
+      
+      #pearson correlation
+      res <- cor.test(df1$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(h)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+  }
+}
+
+
+
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "TnqvTnqCoefficients.csv")
+
+#--------------------------------------------------------
+
+#--------------------------------------------------------
+
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+#--------------------------------------------------------
+#Comparison Surveys against Objective Measures
+#--------------------------------------------------------
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Tq
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+ObjMeasures <- read_csv("ObjMeasuresFinal.csv")
+LoopObj <- select(ObjMeasures, c(WKLContainmentIndex,WKLnew_cases_smoothed,WKLnew_deaths_smoothed,WKLnew_tests_smoothed,WKLnew_vaccinations_smoothed,WKLhosp_patients))
+ObjMesList <- colnames(LoopObj)
+#survey values;
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in ObjMesList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      ObjMeasures$corr <- ObjMeasures[[A]]
+      
+      #pearson correlation
+      res <- cor.test(ObjMeasures$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "TqObjCoefficients.csv")
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Tnq
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+ObjMeasures <- read_csv("ObjMeasuresFinal.csv")
+LoopObj <- select(ObjMeasures, c(WKLContainmentIndex,WKLnew_cases_smoothed,WKLnew_deaths_smoothed,WKLnew_tests_smoothed,WKLnew_vaccinations_smoothed,WKLhosp_patients))
+ObjMesList <- colnames(LoopObj)
+#survey values;
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in ObjMesList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      ObjMeasures$corr <- ObjMeasures[[A]]
+      
+      #pearson correlation
+      res <- cor.test(ObjMeasures$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "TnqObjCoefficients.csv")
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Rs
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+ObjMeasures <- read_csv("ObjMeasuresFinal.csv")
+LoopObj <- select(ObjMeasures, c(WKLContainmentIndex,WKLnew_cases_smoothed,WKLnew_deaths_smoothed,WKLnew_tests_smoothed,WKLnew_vaccinations_smoothed,WKLhosp_patients))
+ObjMesList <- colnames(LoopObj)
+#survey values;
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in ObjMesList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      ObjMeasures$corr <- ObjMeasures[[A]]
+      
+      #pearson correlation
+      res <- cor.test(ObjMeasures$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "RsObjCoefficients.csv")
+#--------------------------------------------------------
+#Lets do Pearson's coefficient for Rc
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+ObjMeasures <- read_csv("ObjMeasuresFinal.csv")
+LoopObj <- select(ObjMeasures, c(WKLContainmentIndex,WKLnew_cases_smoothed,WKLnew_deaths_smoothed,WKLnew_tests_smoothed,WKLnew_vaccinations_smoothed,WKLhosp_patients))
+ObjMesList <- colnames(LoopObj)
+#survey values;
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc", pattern = "*.csv")
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(12))
+correlations <- vector("list", "length" = length(12))
+freesomdeg <- vector("list", "length" = length(12))
+tstatistics <- vector("list", "length" = length(12))
+filename <- vector("list", "length" = length(12))
+surveyname <- vector("list", "length" = length(12))
+
+#6 survey versions times 60 other options is 360
+for (A in ObjMesList){
+  #5 files with 12 options each, so dataframe should have 60
+  for (i in seq_along(files)) {
+    filename = files[[i]]
+    # Read data in
+    df <- read.csv(filename, header = TRUE)
+    #create list for loop
+    LoopDf <- df[2:13]
+    my_list2 <- colnames(LoopDf)
+    k = 1
+    for (x in my_list2){
+      df$corr <- LoopDf[[x]]
+      ObjMeasures$corr <- ObjMeasures[[A]]
+      
+      #pearson correlation
+      res <- cor.test(ObjMeasures$corr, df$corr, 
+                      method = "pearson")
+      
+      #save pbale, coeff, degrees of free dom, t test stat
+      pv <- res$p.value
+      corr <- res$estimate
+      dff <- res$parameter
+      ttest <- res$statistic[1]
+      
+      #paste values
+      pvalues[[k]] <- paste(pv)
+      correlations[[k]] <- paste(corr)
+      freesomdeg[[k]] <- paste(dff)
+      tstatistics[[k]] <- paste(ttest)
+      filename[[k]] <- paste(x)
+      surveyname[[k]] <- paste(A)
+      k = k+1
+    }
+    
+    test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+    
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+}
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "RcObjCoefficients.csv")
+
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library(glue)
+#--------------------------------------------------------
+#Comparison Surveys against Objective Measures
+#--------------------------------------------------------
+#--------------------------------------------------------
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+Sentiment <- read_csv("AllSentiment.csv")
+LoopSent <- select(Sentiment, c(HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd29,AXIOSyd44,HPSyd39,HPSyd25))
+SentimentList <- colnames(LoopSent)
+#survey values;
+
+#obj measures
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+ObjMeasures <- read_csv("ObjMeasuresFinal.csv")
+LoopObj <- select(ObjMeasures, c(WKLContainmentIndex,WKLnew_cases_smoothed,WKLnew_deaths_smoothed,WKLnew_tests_smoothed,WKLnew_vaccinations_smoothed,WKLhosp_patients))
+ObjMesList <- colnames(LoopObj)
+
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("CorrTempl.csv")
+
+
+#list for creation dataframe
+pvalues <- vector("list", "length" = length(6))
+correlations <- vector("list", "length" = length(6))
+freesomdeg <- vector("list", "length" = length(6))
+tstatistics <- vector("list", "length" = length(6))
+filename <- vector("list", "length" = length(6))
+surveyname <- vector("list", "length" = length(6))
+
+#6 survey versions times 6 objective measures is 36
+for (A in ObjMesList){
+  my_list2 <- colnames(LoopSent)
+  k = 1
+  for (x in my_list2){
+    Sentiment$corr <- LoopSent[[x]]
+    ObjMeasures$corr <- ObjMeasures[[A]]
+    
+    #pearson correlation
+    res <- cor.test(Sentiment$corr, ObjMeasures$corr, 
+                    method = "pearson")
+    
+    #save pbale, coeff, degrees of free dom, t test stat
+    pv <- res$p.value
+    corr <- res$estimate
+    dff <- res$parameter
+    ttest <- res$statistic[1]
+    
+    #paste values
+    pvalues[[k]] <- paste(pv)
+    correlations[[k]] <- paste(corr)
+    freesomdeg[[k]] <- paste(dff)
+    tstatistics[[k]] <- paste(ttest)
+    filename[[k]] <- paste(x)
+    surveyname[[k]] <- paste(A)
+    k = k+1
+  }
+  
+  test2 <-do.call(cbind, list(pvalues, correlations,freesomdeg,tstatistics,filename,surveyname))
+  
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, Name_Survey=surveyname, Name_SMD=filename, p_value=pvalues,corr_coeff=correlations,t_stat=tstatistics,deg_free=freesomdeg))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge)
+}
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson")
+write_csv(temp, "SurveyObjCoefficients.csv")
+#--------------------------------------------
+
+
+
+
+
+

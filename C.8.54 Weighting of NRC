@@ -1,0 +1,362 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+library("reshape2")
+library("ggplot2")
+#--------------------------------------------------------
+#Weight correction time
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+df <- read_csv("NrcTnq.csv")
+
+#first generate dataset with all sentiment summarised
+dfSentiment <- df %>%
+  group_by(TimeSR) %>%
+  summarise(Tnq_Nrc_NoEm = mean(NrcNOemojiTxt),
+            Tnq_Nrc_Em = mean(NrcEmojiText),
+            Tnq_Nrc_LemEm= mean(NrcLemEmojitxt),
+            Tnq_Nrc_LemNoEm= mean(NrcLemNOEmojitxt),
+            Tnq_Nrc_StemEm = mean(NrcStemEmojitxt),
+            Tnq_Nrc_StemNoEm = mean(NrcStemNOEmojitxt))
+
+#sum of likes and retweets
+df$LIKrt <- df$retweet_count + df$like_count
+
+#separate new dataset with just sentiment scores
+newS <- select( dfSentiment, c(TimeSR))
+
+datelist <- unique(df$TimeSR)
+datelist <- as.character(datelist)
+
+#separate new dataset with just sentiment scores
+new <- select(df, c(LIKrt,TimeSR,NrcNOemojiTxt,NrcEmojiText, NrcLemEmojitxt,NrcLemNOEmojitxt,NrcStemEmojitxt,NrcStemNOEmojitxt))
+
+#loop and do the weight calulcation
+list_columns = list(c('NrcNOemojiTxt'),c('NrcEmojiText'),c('NrcLemEmojitxt'),c('NrcLemNOEmojitxt'),c('NrcStemEmojitxt'),c('NrcStemNOEmojitxt'))
+for(i in list_columns){
+  #create empty week and vallue dataframe to add to
+  Namedf1 <- paste("WT",i,sep="")
+  empty <- newS[1,]
+  empty[paste(Namedf1)] <- 0
+  empty <- newS[0,]
+  {for(x in datelist){
+    #select week and calculate week specific weight
+    mydata <- new[new$TimeSR == x,]
+    #just to be sure sometimes rest rows na
+    data <- mydata[complete.cases(mydata),]
+    
+    weight <- ((nrow(data))/sum(data$LIKrt))
+    
+    Namedf1 <- paste("WT",i,sep="")
+    
+    #sentiment column
+    data$test <- data[[i]]
+    
+    #calculation of weight
+    data$x <- ((data$test * data$LIKrt)*weight)
+    
+    #summarise the week
+    dfmerge <- data %>%
+      group_by(TimeSR) %>%
+      summarise(TempSent = mean(x))
+    
+    # create column
+    dfmerge[paste(Namedf1)] <- dfmerge$TempSent
+    #delete old
+    newie <- select(dfmerge, -c(TempSent))
+    empty <- rbind(empty, newie)
+  }}
+  dfSentiment <- merge(dfSentiment, empty, by = "TimeSR") 
+}
+#Rename columns
+dfSentimentUp <- dfSentiment %>%
+  rename(WT_Tnq_Nrc_NoEm = WTNrcNOemojiTxt,
+         WT_Tnq_Nrc_Em = WTNrcEmojiText,
+         WT_Tnq_Nrc_LemEm = WTNrcLemEmojitxt,
+         WT_Tnq_Nrc_LemNoEm = WTNrcLemNOEmojitxt,
+         WT_Tnq_Nrc_StemEm = WTNrcStemEmojitxt,
+         WT_Tnq_Nrc_StemNoEm = WTNrcStemNOEmojitxt)
+
+#correct range from -1 to 1, to 0 to 1
+#add 1
+df2 <- dfSentimentUp %>%
+  mutate_at(2:13, ~.+1)
+# multiply by 0.5
+dfFinal <- df2 %>%
+  mutate_at(2:13, ~.*0.5)
+
+# save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted")
+write_csv(dfFinal, "TnqNrcSentiment.csv")
+
+# assign index
+dfFinal$week <- 1:nrow(dfFinal) 
+
+All <- select(dfFinal, -c(TimeSR))
+
+df2 <- melt(All ,  id.vars = 'week', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(week,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Sentiment Score")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 20))
+
+
+#--------------------------------------------------------
+#TQ
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+df <- read_csv("NrcTq.csv")
+
+#first generate dataset with all sentiment summarised
+dfSentiment <- df %>%
+  group_by(TimeSR) %>%
+  summarise(Tq_Nrc_NoEm = mean(NrcNOemojiTxt),
+            Tq_Nrc_Em = mean(NrcEmojiText),
+            Tq_Nrc_LemEm= mean(NrcLemEmojitxt),
+            Tq_Nrc_LemNoEm= mean(NrcLemNOEmojitxt),
+            Tq_Nrc_StemEm = mean(NrcStemEmojitxt),
+            Tq_Nrc_StemNoEm = mean(NrcStemNOEmojitxt))
+
+#sum of likes and retweets
+df$LIKrt <- df$retweet_count + df$like_count
+
+#separate new dataset with just sentiment scores
+newS <- select( dfSentiment, c(TimeSR))
+
+datelist <- unique(df$TimeSR)
+datelist <- as.character(datelist)
+
+#separate new dataset with just sentiment scores
+new <- select(df, c(LIKrt,TimeSR,NrcNOemojiTxt,NrcEmojiText, NrcLemEmojitxt,NrcLemNOEmojitxt,NrcStemEmojitxt,NrcStemNOEmojitxt))
+
+#loop and do the weight calulcation
+list_columns = list(c('NrcNOemojiTxt'),c('NrcEmojiText'),c('NrcLemEmojitxt'),c('NrcLemNOEmojitxt'),c('NrcStemEmojitxt'),c('NrcStemNOEmojitxt'))
+for(i in list_columns){
+  #create empty week and vallue dataframe to add to
+  Namedf1 <- paste("WT",i,sep="")
+  empty <- newS[1,]
+  empty[paste(Namedf1)] <- 0
+  empty <- newS[0,]
+  {for(x in datelist){
+    #select week and calculate week specific weight
+    mydata <- new[new$TimeSR == x,]
+    #just to be sure sometimes rest rows na
+    data <- mydata[complete.cases(mydata),]
+    
+    weight <- ((nrow(data))/sum(data$LIKrt))
+    
+    Namedf1 <- paste("WT",i,sep="")
+    
+    #sentiment column
+    data$test <- data[[i]]
+    
+    #calculation of weight
+    data$x <- ((data$test * data$LIKrt)*weight)
+    
+    #summarise the week
+    dfmerge <- data %>%
+      group_by(TimeSR) %>%
+      summarise(TempSent = mean(x))
+    
+    # create column
+    dfmerge[paste(Namedf1)] <- dfmerge$TempSent
+    #delete old
+    newie <- select(dfmerge, -c(TempSent))
+    empty <- rbind(empty, newie)
+  }}
+  dfSentiment <- merge(dfSentiment, empty, by = "TimeSR") 
+}
+#Rename columns
+dfSentimentUp <- dfSentiment %>%
+  rename(WT_Tq_Nrc_NoEm = WTNrcNOemojiTxt,
+         WT_Tq_Nrc_Em = WTNrcEmojiText,
+         WT_Tq_Nrc_LemEm = WTNrcLemEmojitxt,
+         WT_Tq_Nrc_LemNoEm = WTNrcLemNOEmojitxt,
+         WT_Tq_Nrc_StemEm = WTNrcStemEmojitxt,
+         WT_Tq_Nrc_StemNoEm = WTNrcStemNOEmojitxt)
+
+#correct range from -1 to 1, to 0 to 1
+#add 1
+df2 <- dfSentimentUp %>%
+  mutate_at(2:13, ~.+1)
+# multiply by 0.5
+dfFinal <- df2 %>%
+  mutate_at(2:13, ~.*0.5)
+
+# save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted")
+write_csv(dfFinal, "TqNrcSentiment.csv")
+
+# assign index
+dfFinal$week <- 1:nrow(dfFinal) 
+
+All <- select(dfFinal, -c(TimeSR))
+
+df2 <- melt(All ,  id.vars = 'week', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(week,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Sentiment Score")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 20))
+#--------------------------------------------------------
+#RS
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/nrc")
+df <- read_csv("NrcRs.csv")
+
+#first generate dataset with all sentiment summarised
+dfSentiment <- df %>%
+  group_by(TimeSR) %>%
+  summarise(Rs_Nrc_NoEm = mean(NrcNOemojiTxt),
+            Rs_Nrc_Em = mean(NrcEmojiText),
+            Rs_Nrc_LemEm= mean(NrcLemEmojitxt),
+            Rs_Nrc_LemNoEm= mean(NrcLemNOEmojitxt),
+            Rs_Nrc_StemEm = mean(NrcStemEmojitxt),
+            Rs_Nrc_StemNoEm = mean(NrcStemNOEmojitxt))
+
+#sum of likes and retweets
+df$LIKrt <- df$retweet_count + df$like_count
+
+#separate new dataset with just sentiment scores
+newS <- select( dfSentiment, c(TimeSR))
+
+datelist <- unique(df$TimeSR)
+datelist <- as.character(datelist)
+
+#separate new dataset with just sentiment scores
+new <- select(df, c(LIKrt,TimeSR,NrcNOemojiTxt,NrcEmojiText, NrcLemEmojitxt,NrcLemNOEmojitxt,NrcStemEmojitxt,NrcStemNOEmojitxt))
+
+#loop and do the weight calulcation
+list_columns = list(c('NrcNOemojiTxt'),c('NrcEmojiText'),c('NrcLemEmojitxt'),c('NrcLemNOEmojitxt'),c('NrcStemEmojitxt'),c('NrcStemNOEmojitxt'))
+for(i in list_columns){
+  #create empty week and vallue dataframe to add to
+  Namedf1 <- paste("WT",i,sep="")
+  empty <- newS[1,]
+  empty[paste(Namedf1)] <- 0
+  empty <- newS[0,]
+  {for(x in datelist){
+    #select week and calculate week specific weight
+    mydata <- new[new$TimeSR == x,]
+    #just to be sure sometimes rest rows na
+    data <- mydata[complete.cases(mydata),]
+    
+    weight <- ((nrow(data))/sum(data$LIKrt))
+    
+    Namedf1 <- paste("WT",i,sep="")
+    
+    #sentiment column
+    data$test <- data[[i]]
+    
+    #calculation of weight
+    data$x <- ((data$test * data$LIKrt)*weight)
+    
+    #summarise the week
+    dfmerge <- data %>%
+      group_by(TimeSR) %>%
+      summarise(TempSent = mean(x))
+    
+    # create column
+    dfmerge[paste(Namedf1)] <- dfmerge$TempSent
+    #delete old
+    newie <- select(dfmerge, -c(TempSent))
+    empty <- rbind(empty, newie)
+  }}
+  dfSentiment <- merge(dfSentiment, empty, by = "TimeSR") 
+}
+#Rename columns
+dfSentimentUp <- dfSentiment %>%
+  rename(WT_Rs_Nrc_NoEm = WTNrcNOemojiTxt,
+         WT_Rs_Nrc_Em = WTNrcEmojiText,
+         WT_Rs_Nrc_LemEm = WTNrcLemEmojitxt,
+         WT_Rs_Nrc_LemNoEm = WTNrcLemNOEmojitxt,
+         WT_Rs_Nrc_StemEm = WTNrcStemEmojitxt,
+         WT_Rs_Nrc_StemNoEm = WTNrcStemNOEmojitxt)
+
+#correct range from -1 to 1, to 0 to 1
+#add 1
+df2 <- dfSentimentUp %>%
+  mutate_at(2:13, ~.+1)
+# multiply by 0.5
+dfFinal <- df2 %>%
+  mutate_at(2:13, ~.*0.5)
+
+# save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted")
+write_csv(dfFinal, "RsNrcSentiment.csv")
+
+# assign index
+dfFinal$week <- 1:nrow(dfFinal) 
+
+All <- select(dfFinal, -c(TimeSR))
+
+df2 <- melt(All ,  id.vars = 'week', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(week,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Sentiment Score")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 20))
+
+
+#--------------------------------------------------------
+#Plot Comments
+#--------------------------------------------------------
+# save
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Weighter")
+df <- read_csv("RcVADERSentiment.csv")
+
+# assign index
+df$week <- 1:nrow(df) 
+
+All <- select(df, -c(TimeSR))
+
+df2 <- melt(All ,  id.vars = 'week', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(week,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Sentiment Score")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 20))

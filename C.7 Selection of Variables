@@ -1,0 +1,97 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+
+#--------------------------------------------------------
+#Twitter Column selection
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/ForPre-Pr")
+NoSourceTweet <- read_csv("NoSourceTweetsClean.csv")
+YesSourceTweet <- read_csv("YesSourceTweetsClean.csv")
+
+#missing values
+sapply(YesSourceTweet , function(x) sum(is.na(x)))
+sapply(NoSourceTweet , function(x) sum(is.na(x)))
+#duplicates
+sum(duplicated(YesSourceTweet))
+sum(duplicated(NoSourceTweet))
+# 0 for both
+nrow(NoSourceTweet)
+#269478
+nrow(YesSourceTweet)
+#269478
+
+#now select columns
+str(NoSourceTweet)
+NewNoSourceTweet<- select(NoSourceTweet, -c(lengthtext,user_tweet_count,user_username,created_at,author_id,lang,in_reply_to_user_id,user_name,user_following_count))
+#6 variables"
+str(NewNoSourceTweet)
+#text
+#retweet_count
+#like_count
+#quote_count
+#user_followers_count
+#TimeSR
+#SAVE
+write_csv(NewNoSourceTweet, file = "FinalNoSourceTweet.csv")
+
+#now select columns
+str(YesSourceTweet)
+NewYesSourceTweet <- select(YesSourceTweet, -c(lengthtext,user_tweet_count,user_username,created_at,author_id,lang,in_reply_to_user_id,user_name,user_following_count))
+#6 variables"
+str(NewYesSourceTweet)
+#Combine
+#retweet_count
+#like_count
+#quote_count
+#user_followers_count
+#TimeSR
+#SAVE
+write_csv(NewYesSourceTweet, file = "FinalYesSourceTweet.csv")
+
+
+#--------------------------------------------------------
+#Reddit Column selection
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/ForPre-Pr")
+RedditComments <- read_csv("CleanRedditComments.csv")
+RedditSubmissions <- read_csv("CleanRedditSubmissions.csv")
+
+#missing values
+sapply(RedditComments , function(x) sum(is.na(x)))
+sapply(RedditSubmissions , function(x) sum(is.na(x)))
+#duplicates
+sum(duplicated(RedditComments))
+sum(duplicated(RedditSubmissions))
+# 0 check
+nrow(RedditComments)
+#2885992 COMMENTS
+nrow(RedditSubmissions)
+#512959 SUBMISSIONS
+
+#now select columns
+str(RedditComments)
+NewRedditComments<- select(RedditComments, -c(id,link_id,DateCreated,author,subreddit,lengthtext))
+#3 variables"
+#body
+#score
+#TimeSR
+#SAVE
+write_csv(NewRedditComments, file = "FinalRedditComments.csv")
+
+#now select columns
+str(RedditSubmissions)
+NewRedditSubmissions<- select(RedditSubmissions, -c(id,DateCreated,author,subreddit,lengthtext,subreddit_subscribers,))
+#4 variables"
+#num_comments
+#score
+#TimeSR
+#Combine
+
+#SAVE
+write_csv(NewRedditSubmissions, file = "FinalRedditSubmissions.csv")
+
+
+
+

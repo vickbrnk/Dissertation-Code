@@ -1,0 +1,160 @@
+library("reshape2")
+library("ggplot2")
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#--------------------------------------------------------
+#LPA bar plots
+#--------------------------------------------------------
+#piecharts for devision of groups
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Detailed LPA/Merged Details")
+df <- read_csv("DataSourceLPA.csv")
+df$Optimal_Classes_DataSource <- paste(df$Optimal_Classes, " Groups" )
+
+df$Optimal_Classes_DataSource <- gsub("1 Groups", "1 Group", df$Optimal_Classes_DataSource)
+
+group <- df %>%
+  group_by(Optimal_Classes_DataSource) %>%
+  summarise(count = n())
+
+
+group$OptimalClasses_DataSource <- paste (group$Optimal_Classes_DataSource, " (n = ", sep = "")
+group$OptimalClasses_DataSource <- paste (group$OptimalClasses_DataSource, group$count, sep = "")
+group$OptimalClasses_DataSource <- paste (group$OptimalClasses_DataSource, ")", sep = "")
+
+  
+# Basic piechart
+pie(group$count, labels = group$Optimal_Classes_DataSource, main="Pie Chart of Optimal Classes found among Data Sources")
+
+# Basic piechart
+pie <- ggplot(group, aes(x="", y=count, fill=OptimalClasses_DataSource)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)
+
+pie + scale_fill_brewer(palette="Blues")+
+  theme_minimal()
+#-------------------------------------------------------
+#----------LEIXCONs----------------------------------------------
+#--------------------------------------------------------
+df <- read_csv("LexiconLPA.csv")
+
+df$Optimal_Classes_Lexicon <- paste(df$Optimal_Classes, " Groups" )
+
+df$Optimal_Classes_Lexicon <- gsub("1 Groups", "1 Group", df$Optimal_Classes_Lexicon)
+
+group <- df %>%
+  group_by(Optimal_Classes_Lexicon) %>%
+  summarise(count = n())
+
+
+group$OptimalClasses_Lexicon <- paste (group$Optimal_Classes_Lexicon, " (n = ", sep = "")
+group$OptimalClasses_Lexicon <- paste (group$OptimalClasses_Lexicon, group$count, sep = "")
+group$OptimalClasses_Lexicon <- paste (group$OptimalClasses_Lexicon, ")", sep = "")
+
+
+# Basic piechart
+pie(group$count, labels = group$Optimal_Classes_Lexicon, main="Pie Chart of Optimal Classes found among Data Sources")
+
+# Basic piechart
+pie <- ggplot(group, aes(x="", y=count, fill=OptimalClasses_Lexicon)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)
+
+pie + scale_fill_brewer(palette="Blues")+
+  theme_minimal()
+
+
+#--------------------------------------------------------
+#----------Preprocessing---------------------------------------------
+#--------------------------------------------------------
+df <- read_csv("PreProcessingLPA.csv")
+
+df$Optimal_Classes_PreProcessing <- paste(df$Optimal_Classes, " Groups" )
+
+df$Optimal_Classes_PreProcessing <- gsub("1 Groups", "1 Group", df$Optimal_Classes_PreProcessing)
+
+group <- df %>%
+  group_by(Optimal_Classes_PreProcessing) %>%
+  summarise(count = n())
+
+
+group$OptimalClasses_PreProcessing <- paste (group$Optimal_Classes_PreProcessing, " (n = ", sep = "")
+group$OptimalClasses_PreProcessing <- paste (group$OptimalClasses_PreProcessing, group$count, sep = "")
+group$OptimalClasses_PreProcessing <- paste (group$OptimalClasses_PreProcessing, ")", sep = "")
+
+
+# Basic piechart
+pie(group$count, labels = group$Optimal_Classes_PreProcessing, main="Pie Chart of Optimal Classes found among Data Sources")
+
+# Basic piechart
+pie <- ggplot(group, aes(x="", y=count, fill=OptimalClasses_PreProcessing)) +
+  geom_bar(stat="identity", width=1) +
+  coord_polar("y", start=0)
+
+pie + scale_fill_brewer(palette="Blues")+
+  theme_minimal()
+
+
+#--------------------------------------------------------
+#----------Bar Plots of Groupings--------------------------------------------
+#--------------------------------------------------------
+df <- read_csv("PreProcessingLPA.csv")
+df$Groupings <- df$FixTitle 
+
+group <- df %>%
+  group_by(Groupings) %>%
+  summarise(count = n())
+
+
+ggplot(data=group, aes(x=Groupings, y=count)) +
+  geom_bar(stat="identity")+
+  scale_y_continuous(breaks = seq(0, 11, 1))+theme(text = element_text(size = 22))
+
+
+#----------Bar Plots of Groupings Lexicons--------------------------------------------
+#--------------------------------------------------------
+df <- read_csv("LexiconLPA.csv")
+df$Groupings <- df$FixTitle 
+
+group <- df %>%
+  group_by(Groupings) %>%
+  summarise(count = n())
+
+
+ggplot(data=group, aes(x=Groupings, y=count)) +
+  geom_bar(stat="identity")+
+  scale_y_continuous(breaks = seq(0, 20, 1))+ theme(axis.text.x = element_text(angle = 20)) +theme(text = element_text(size = 22))
+
+
+#----------Bar Plots of DataSource--------------------------------------------
+#--------------------------------------------------------
+df <- read_csv("DataSourceLPA copy.csv")
+
+#split groupings in column
+before <- df %>%
+  separate(FixTitle, c("Onegroup", "Two_group"), ",")
+
+#create two datasets to then bind rows of
+ONegroup <- select(before, c(Onegroup, merge))
+Twogroup <- select(before, c(Two_group, merge))
+Twogroup$Onegroup <- Twogroup$Two_group
+Twogroup2 <- select(Twogroup, c(merge,Onegroup))
+
+total <- rbind(ONegroup,Twogroup2)
+final <-  total[complete.cases(total),]
+  
+  
+final$Groupings <- final$Onegroup 
+
+group <- final %>%
+  group_by(Groupings) %>%
+  summarise(count = n())
+
+
+ggplot(data=group, aes(x=Groupings, y=count)) +
+  geom_bar(stat="identity")+
+  scale_y_continuous(breaks = seq(0, 31, 1))+ theme(axis.text.x = element_text(angle = 20)) +theme(text = element_text(size = 22))
+
+

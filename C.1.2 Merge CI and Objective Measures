@@ -1,0 +1,36 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Final")
+#read in data
+Response <- read.csv("ContainmentUSA.csv")
+Vacc1 <- read.csv("AllWeeksObjMeasuresUSA.csv")
+SmoothVacc<- read.csv("USASmoothObject.csv")
+#merge these two
+total <- merge(Response,Vacc1,by="TimeSR")
+totalsmooth <- merge(Response,SmoothVacc,by="TimeSR")
+
+#check duplicates and NA
+sum(duplicated(total))
+sapply(total , function(x) sum(is.na(x)))
+#none
+#Save all Objective measures
+total2 <- select(total, -c( X.y, X.x))
+write.csv(total2, file = "USAComboObjMeasures.csv")
+
+#---------SMOOTH
+#check duplicates and NA
+sum(duplicated(totalsmooth))
+sapply(totalsmooth , function(x) sum(is.na(x)))
+#none
+#Save all Objective measures
+totalSmooth2 <- select(totalsmooth, -c( X.y, X.x))
+write.csv(totalSmooth2, file = "SmoothUSAComboObjMeasures.csv")
+
+#FinalSmooth remove some not needed columns
+str(totalSmooth2)
+FinalSmooth <- select(totalSmooth2, -c(WKLnew_people_vaccinated_smoothed, WKLStringency_Index,WKLicu_patients,WKLpositive_rate))
+write.csv(FinalSmooth, file = "FinalObjectiveMeasuresEndJUly.csv")
+

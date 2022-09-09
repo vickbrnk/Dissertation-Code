@@ -1,0 +1,353 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#-----------------------------------------------
+#Plotting Ranges
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+df <- read_csv("RcAFINNSentiment.csv")
+df2 <- read_csv("RcBingSentiment.csv")
+df3 <- read_csv("RcNRCSentiment.csv")
+df4 <- read_csv("RcTxtBlbSentiment.csv")
+df5 <- read_csv("RcVADERSentiment.csv")
+
+
+#merge all together
+merge <- merge(df, df2, by = "TimeSR")
+merge2 <- merge(merge, df3, by = "TimeSR")
+merge3 <- merge(merge2, df4, by = "TimeSR")
+merge4 <- merge(merge3, df5, by = "TimeSR")
+merge4$WTTimeSR <- merge4$TimeSR
+
+#separate weighted and unweighted
+weighted <- merge4[ , grepl( "WT" , names( merge4 ) ) ]
+NOTweighted <- merge4[ , !grepl( "WT" , names( merge4 ) ) ]
+
+#find smallet value in weighted
+SmallestWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTSmall = min(across(1:30)))
+
+#find largest value epr week
+LargesttWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTLargest = max(across(1:30)))
+
+#-----------------------------------------------
+
+#find smallet value in weighted
+SmallestNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Small = min(across(1:30)))
+
+#find largest value epr week
+LargesttNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Largest = max(across(1:30)))
+
+
+#-----------------------------------------------
+LargesttWeighted$TimeSR <- LargesttWeighted$WTTimeSR
+SmallestWeighted$TimeSR <- SmallestWeighted$WTTimeSR
+
+total <- merge(SmallestNOWeighted,LargesttNOWeighted, by = "TimeSR")
+total2 <- merge(total,LargesttWeighted, by = "TimeSR")
+total3 <- merge(total2,SmallestWeighted, by = "TimeSR")
+
+Shape <- select(total3, -c(WTTimeSR.x, WTTimeSR.y, TimeSR))
+Shape$week <- 1:nrow(Shape)
+
+#-----------------------------------------------
+library("ggplot2")
+x <- Shape$week
+
+# Data
+y1 <- Shape$Small
+y2 <- Shape$Largest
+y3 <- Shape$WTSmall
+y4 <- Shape$WTLargest
+
+ggplot(Shape) +
+  geom_ribbon(aes(x=week, ymax=Small, ymin=Largest), fill="pink", alpha=.5) +
+  geom_ribbon(aes(x=week, ymax=WTSmall, ymin=WTLargest), fill="blue", alpha=.5) +
+  geom_line(aes(week, Small,color = "Rc Sentiment"))+
+  geom_line(aes(week, Largest,color = "Rc Sentiment"))+
+  geom_line(aes(week, WTSmall,color = "Weighted Rc Sentiment"))+
+  geom_line(aes(week, WTLargest,color = "Weighted Rc Sentiment"))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                          x = c(4, 56),
+                          xintercept = c(4, 56),
+                          linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))+
+  theme(legend.title=element_blank())
+#-----------------------------------------------
+#RS
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+df <- read_csv("RsAFINNSentiment.csv")
+df2 <- read_csv("RsBingSentiment.csv")
+df3 <- read_csv("RsNRCSentiment.csv")
+df4 <- read_csv("RsTxtBlbSentiment.csv")
+df5 <- read_csv("RsVADERSentiment.csv")
+
+
+#merge all together
+merge <- merge(df, df2, by = "TimeSR")
+merge2 <- merge(merge, df3, by = "TimeSR")
+merge3 <- merge(merge2, df4, by = "TimeSR")
+merge4 <- merge(merge3, df5, by = "TimeSR")
+merge4$WTTimeSR <- merge4$TimeSR
+
+#separate weighted and unweighted
+weighted <- merge4[ , grepl( "WT" , names( merge4 ) ) ]
+NOTweighted <- merge4[ , !grepl( "WT" , names( merge4 ) ) ]
+
+#find smallet value in weighted
+SmallestWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTSmall = min(across(1:30)))
+
+#find largest value epr week
+LargesttWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTLargest = max(across(1:30)))
+
+#-----------------------------------------------
+
+#find smallet value in weighted
+SmallestNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Small = min(across(1:30)))
+
+#find largest value epr week
+LargesttNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Largest = max(across(1:30)))
+
+
+#-----------------------------------------------
+LargesttWeighted$TimeSR <- LargesttWeighted$WTTimeSR
+SmallestWeighted$TimeSR <- SmallestWeighted$WTTimeSR
+
+total <- merge(SmallestNOWeighted,LargesttNOWeighted, by = "TimeSR")
+total2 <- merge(total,LargesttWeighted, by = "TimeSR")
+total3 <- merge(total2,SmallestWeighted, by = "TimeSR")
+
+Shape <- select(total3, -c(WTTimeSR.x, WTTimeSR.y, TimeSR))
+Shape$week <- 1:nrow(Shape)
+
+#-----------------------------------------------
+library("ggplot2")
+x <- Shape$week
+
+# Data
+y1 <- Shape$Small
+y2 <- Shape$Largest
+y3 <- Shape$WTSmall
+y4 <- Shape$WTLargest
+
+ggplot(Shape) +
+  geom_ribbon(aes(x=week, ymax=Small, ymin=Largest), fill="pink", alpha=.5) +
+  geom_ribbon(aes(x=week, ymax=WTSmall, ymin=WTLargest), fill="blue", alpha=.5) +
+  geom_line(aes(week, Small,color = "Rs Sentiment"))+
+  geom_line(aes(week, Largest,color = "Rs Sentiment"))+
+  geom_line(aes(week, WTSmall,color = "Weighted Rs Sentiment"))+
+  geom_line(aes(week, WTLargest,color = "Weighted Rs Sentiment"))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                          x = c(4, 56),
+                          xintercept = c(4, 56),
+                          linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))+
+  theme(legend.title=element_blank())
+
+
+#-----------------------------------------------
+#TQ
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+df <- read_csv("TqAFINNSentiment.csv")
+df2 <- read_csv("TqBingSentiment.csv")
+df3 <- read_csv("TqNRCSentiment.csv")
+df4 <- read_csv("TqTxtBlbSentiment.csv")
+df5 <- read_csv("TqVADERSentiment.csv")
+
+
+#merge all together
+merge <- merge(df, df2, by = "TimeSR")
+merge2 <- merge(merge, df3, by = "TimeSR")
+merge3 <- merge(merge2, df4, by = "TimeSR")
+merge4 <- merge(merge3, df5, by = "TimeSR")
+merge4$WTTimeSR <- merge4$TimeSR
+
+#separate weighted and unweighted
+weighted <- merge4[ , grepl( "WT" , names( merge4 ) ) ]
+NOTweighted <- merge4[ , !grepl( "WT" , names( merge4 ) ) ]
+
+#find smallet value in weighted
+SmallestWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTSmall = min(across(1:30)))
+
+#find largest value epr week
+LargesttWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTLargest = max(across(1:30)))
+
+#-----------------------------------------------
+
+#find smallet value in weighted
+SmallestNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Small = min(across(1:30)))
+
+#find largest value epr week
+LargesttNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Largest = max(across(1:30)))
+
+
+#-----------------------------------------------
+LargesttWeighted$TimeSR <- LargesttWeighted$WTTimeSR
+SmallestWeighted$TimeSR <- SmallestWeighted$WTTimeSR
+
+total <- merge(SmallestNOWeighted,LargesttNOWeighted, by = "TimeSR")
+total2 <- merge(total,LargesttWeighted, by = "TimeSR")
+total3 <- merge(total2,SmallestWeighted, by = "TimeSR")
+
+Shape <- select(total3, -c(WTTimeSR.x, WTTimeSR.y, TimeSR))
+Shape$week <- 1:nrow(Shape)
+
+#-----------------------------------------------
+library("ggplot2")
+x <- Shape$week
+
+# Data
+y1 <- Shape$Small
+y2 <- Shape$Largest
+y3 <- Shape$WTSmall
+y4 <- Shape$WTLargest
+
+ggplot(Shape) +
+  geom_ribbon(aes(x=week, ymax=Small, ymin=Largest), fill="pink", alpha=.5) +
+  geom_ribbon(aes(x=week, ymax=WTSmall, ymin=WTLargest), fill="blue", alpha=.5) +
+  geom_line(aes(week, Small,color = "Tq Sentiment"))+
+  geom_line(aes(week, Largest,color = "Tq Sentiment"))+
+  geom_line(aes(week, WTSmall,color = "Weighted Tq Sentiment"))+
+  geom_line(aes(week, WTLargest,color = "Weighted Tq Sentiment"))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                          x = c(4, 56),
+                          xintercept = c(4, 56),
+                          linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))+
+  theme(legend.title=element_blank())
+
+
+#-----------------------------------------------
+#TnQ
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+df <- read_csv("TnqAFINNSentiment.csv")
+df2 <- read_csv("TnqBingSentiment.csv")
+df3 <- read_csv("TnqNRCSentiment.csv")
+df4 <- read_csv("TnqTxtBlbSentiment.csv")
+df5 <- read_csv("TnqVADERSentiment.csv")
+
+
+#merge all together
+merge <- merge(df, df2, by = "TimeSR")
+merge2 <- merge(merge, df3, by = "TimeSR")
+merge3 <- merge(merge2, df4, by = "TimeSR")
+merge4 <- merge(merge3, df5, by = "TimeSR")
+merge4$WTTimeSR <- merge4$TimeSR
+
+#separate weighted and unweighted
+weighted <- merge4[ , grepl( "WT" , names( merge4 ) ) ]
+NOTweighted <- merge4[ , !grepl( "WT" , names( merge4 ) ) ]
+
+#find smallet value in weighted
+SmallestWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTSmall = min(across(1:30)))
+
+#find largest value epr week
+LargesttWeighted <- weighted %>%
+  group_by(WTTimeSR) %>%
+  summarise(WTLargest = max(across(1:30)))
+
+#-----------------------------------------------
+
+#find smallet value in weighted
+SmallestNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Small = min(across(1:30)))
+
+#find largest value epr week
+LargesttNOWeighted <- NOTweighted %>%
+  group_by(TimeSR) %>%
+  summarise(Largest = max(across(1:30)))
+
+
+#-----------------------------------------------
+LargesttWeighted$TimeSR <- LargesttWeighted$WTTimeSR
+SmallestWeighted$TimeSR <- SmallestWeighted$WTTimeSR
+
+total <- merge(SmallestNOWeighted,LargesttNOWeighted, by = "TimeSR")
+total2 <- merge(total,LargesttWeighted, by = "TimeSR")
+total3 <- merge(total2,SmallestWeighted, by = "TimeSR")
+
+Shape <- select(total3, -c(WTTimeSR.x, WTTimeSR.y, TimeSR))
+Shape$week <- 1:nrow(Shape)
+
+#-----------------------------------------------
+library("ggplot2")
+x <- Shape$week
+
+# Data
+y1 <- Shape$Small
+y2 <- Shape$Largest
+y3 <- Shape$WTSmall
+y4 <- Shape$WTLargest
+
+ggplot(Shape) +
+  geom_ribbon(aes(x=week, ymax=Small, ymin=Largest), fill="pink", alpha=.5) +
+  geom_ribbon(aes(x=week, ymax=WTSmall, ymin=WTLargest), fill="blue", alpha=.5) +
+  geom_line(aes(week, Small,color = "Tnq Sentiment"))+
+  geom_line(aes(week, Largest,color = "Tnq Sentiment"))+
+  geom_line(aes(week, WTSmall,color = "Weighted Tnq Sentiment"))+
+  geom_line(aes(week, WTLargest,color = "Weighted Tnq Sentiment"))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                          x = c(4, 56),
+                          xintercept = c(4, 56),
+                          linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))+
+  theme(legend.title=element_blank())
+

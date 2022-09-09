@@ -1,0 +1,436 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(foreign)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/The 34 Waves")
+
+#--------------------------------------------------------
+#see if there are any missing values & length of responses
+#--------------------------------------------------------
+
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/The 34 Waves", pattern = "*.sav")
+#create lists to store extraxcted info
+na_list <- vector("list", "length" = length(files))
+numvalues_list <- vector("list", "length" = length(files))
+file_list <- vector("list", "length" = length(files))
+  
+for (i in seq_along(files)) {
+  filename = files[[i]]
+  # Read data in
+  df <- read.spss(filename, to.data.frame = TRUE,use.value.labels = TRUE)
+  
+ 
+  # Extract length by counting a column (lang) in this case
+  length <- nrow(df)
+  na_value <- sum(is.na(df$wt_final_pid))
+  #add to list
+  na_list[[i]] <- paste(na_value)
+  file_list[[i]] <- paste(filename)
+  numvalues_list[[i]] <- paste(length)
+}
+
+#merge
+AllMissingValues <- do.call(rbind, Map(data.frame, NAValues = na_list, FileName = file_list,NumofObserv = numvalues_list))
+str(test)
+test$NumofObserv <- as.numeric(test$NumofObserv)
+str(test)
+averagerespondents <- mean(test$NumofObserv)
+#No missing values in any of the observations, average of respondents is 1036.8
+
+
+#--------------------------------------------------------
+#CONVERT ALL TO CSV
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/The 34 Waves")
+
+files3 <-list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/The 34 Waves", pattern = "*.sav")
+#loop to check name of weight column
+for (i in seq_along(files3)) {
+  filename = files3[[i]]
+  name <- paste(filename)
+  name2 <- gsub(".sav", "", name)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/The 34 Waves")
+  name3 <- read.spss(filename, to.data.frame = TRUE,use.value.labels = TRUE)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/All CSV")
+  write.csv(name3, file = paste(name2,"csv", sep = "."))
+}
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT for waves 33 until 36 NO AGE
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/33 to 36")
+
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/33 to 36", pattern = "*.csv")
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files2))
+somewhatlikely <- vector("list", "length" = length(files2))
+notlikely <- vector("list", "length" = length(files2))
+defnotlikely <- vector("list", "length" = length(files2))
+totalpeople <- vector("list", "length" = length(files2))
+file_list <- vector("list", "length" = length(files2))
+waveNum <-vector("list", "length" = length(files2))
+vaccinations33to36 <- c(0,0,0,0)
+
+#test to see what values
+df <- read.csv(files2[[2]])
+unique(df$Q73)
+vlik1 <- df[df$Q73 == "Not at all likely ",]
+vlik  <- sum(vlik1$wt_final)
+
+for (i in seq_along(files2)) {
+  filename = files2[[i]]
+  # Read data in
+  df <- read.csv(filename)
+  df$WAVE <- as.numeric(df$WAVE)
+  #take out those who skipped
+  df2 <- df[df$Q73 != "Skipped",]
+  
+  # select columns
+  length <- sum(df2$wt_final)
+
+  #get count of all answers
+  vlik1 <- df2[df2$Q73 == "Very likely",]
+  new <- select(vlik1, c(Q73,wt_final))
+  test <- new[complete.cases(new),]
+  vlik  <- sum(test$wt_final)
+  
+  
+  somlik1 <- df2[df2$Q73 == "Somewhat likely",]
+  new2 <- select(somlik1, c(Q73,wt_final))
+  test2 <- new2[complete.cases(new2),]
+  somlik  <- sum(test2$wt_final)
+  
+  
+  notlik1 <- df2[df2$Q73 == "Not very likely",]
+  new3 <- select(notlik1, c(Q73,wt_final))
+  test3 <- new3[complete.cases(new3),]
+  notlik  <- sum(test3$wt_final)
+  
+  
+  defno1 <- df2[df2$Q73 == "Not at all likely ",]
+  new4 <- select(defno1, c(Q73,wt_final))
+  test4 <- new4[complete.cases(new4),]
+  defno  <- sum(test4$wt_final)
+  
+  waveNum1 <- mean(df$WAVE)
+  
+  #add to list
+  file_list[[i]] <- paste(filename)
+  totalpeople[[i]] <- paste(length)
+  verylikely[[i]] <- paste(vlik)
+  somewhatlikely[[i]] <- paste(somlik)
+  notlikely[[i]] <- paste(notlik)
+  defnotlikely[[i]] <- paste(defno)
+  waveNum[[i]] <- paste(waveNum1)
+}
+#merge
+WAVES33to36 <- do.call(rbind, Map(data.frame, Wave = waveNum, Vaccinated = vaccinations33to36, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely,FileName = file_list,NumofObserv = totalpeople))
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT for waves 37 until 67 NO AGE considered
+#--------------------------------------------------------
+files9 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/37 to rest", pattern = "*.csv")
+#--------------------------------------------------------
+#----------------Create vectors for loop----------------------------------------
+
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files9))
+somewhatlikely <- vector("list", "length" = length(files9))
+notlikely <- vector("list", "length" = length(files9))
+defnotlikely <- vector("list", "length" = length(files9))
+totalpeople <- vector("list", "length" = length(files9))
+file_list <- vector("list", "length" = length(files9))
+vaccinationsRest <-  vector("list", "length" = length(files9))
+waveNummer <-vector("list", "length" = length(files9))
+
+#----------------Practice of Loop function----------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd/37 to rest")
+#test to see what values
+dftry <- read.csv(files9[[3]])
+unique(dftry$Q73)
+vlik1 <- dftry[dftry$Q73 == "Not at all likely ",]
+new <- select(vlik1, c(Q73,wt_final))
+test <- new[complete.cases(new),]
+
+#----------------Loop----------------------------------------
+
+for (i in seq_along(files9)) {
+  filename = files9[[i]]
+  # Read data in
+  df <- read.csv(filename)
+  # select columns
+
+  length <- sum(df$wt_final)
+  df$WAVE <- as.numeric(df$WAVE)
+  
+  #get count of all answers
+  HadVaccine1 <- df[df$Q107_1 == "Yes, I have received the vaccine",]
+  new <- select(HadVaccine1, c(Q107_1,wt_final))
+  test <- new[complete.cases(new),]
+  HadVaccine  <- sum(test$wt_final)
+  
+  vlik1 <- df[df$Q73 == "Very likely",]
+  new1 <- select(vlik1, c(Q73,wt_final))
+  test1 <- new1[complete.cases(new1),]
+  vlik  <- sum(test1$wt_final)
+  
+  somlik1 <- df[df$Q73 == "Somewhat likely",]
+  new2 <- select(somlik1, c(Q73,wt_final))
+  test2 <- new2[complete.cases(new2),]
+  somlik  <- sum(test2$wt_final)
+  
+  notlik1 <- df[df$Q73 == "Not very likely",]
+  new3 <- select(notlik1, c(Q73,wt_final))
+  test3 <- new3[complete.cases(new3),]
+  notlik  <- sum(test3$wt_final)
+  
+  defno1 <- df[df$Q73 == "Not at all likely ",]
+  new4 <- select(defno1, c(Q73,wt_final))
+  test4 <- new4[complete.cases(new4),]
+  defno  <- sum(test4$wt_final)
+  
+  waveNumm <- mean(df$WAVE)
+  
+  #add to list
+  file_list[[i]] <- paste(filename)
+  totalpeople[[i]] <- paste(length)
+  verylikely[[i]] <- paste(vlik)
+  somewhatlikely[[i]] <- paste(somlik)
+  notlikely[[i]] <- paste(notlik)
+  defnotlikely[[i]] <- paste(defno)
+  vaccinationsRest[[i]] <- paste(HadVaccine)
+  waveNummer[[i]] <- paste(waveNumm)
+}
+#merge
+WAVESRest <- do.call(rbind, Map(data.frame,Wave =waveNummer,  Vaccinated = vaccinationsRest, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely,FileName = file_list,NumofObserv = totalpeople))
+#--------------------------------------------------------
+#save all
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd")
+#wave 34 has been set as wave 33 for some reason? despite different data
+WAVES33to36["Wave"][WAVES33to36$NumofObserv == "997.7773",] <- "34"
+
+write.csv(AllMissingValues, file = "missingvaluesAxiosandRespondents.csv")
+write.csv(WAVES33to36, file = "Waves33util36.csv")
+write.csv(WAVESRest, file = "Waves37andmore.csv")
+
+
+#merge
+total <- rbind(WAVES33to36, WAVESRest)
+
+#make numeric
+total$Vaccinated = as.numeric(total$Vaccinated)
+total$Vlikely = as.numeric(total$Vlikely)
+total$SMLikely = as.numeric(total$SMLikely )
+total$NotLikely = as.numeric(total$NotLikely)
+total$DefnoLikely = as.numeric(total$DefnoLikely)
+
+str(total)
+total$CheckTotal <- total$Vaccinated+total$Vlikely+total$SMLikely+total$NotLikely+total$DefnoLikely
+
+#--------------------------------------------------------
+#SENTIMENT CALCULATION
+#--------------------------------------------------------
+
+total$Sentiment <-((1*total$Vaccinated)+(0.95*total$Vlikely )+(0.75*total$SMLikely)+(0.25*total$NotLikely)+(0.05*total$DefnoLikely))/(total$CheckTotal)
+
+write.csv(total, file = "AllwavesFinalwSentiment.csv")
+
+#--------------------------------------------------------
+#SAME THING NOW BUT WITH AGE
+#--------------------------------------------------------
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT for waves 33 until 36 WITH AGE
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios/Raw/33 to 36")
+
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios/Raw/33 to 36", pattern = "*.csv")
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files2))
+somewhatlikely <- vector("list", "length" = length(files2))
+notlikely <- vector("list", "length" = length(files2))
+defnotlikely <- vector("list", "length" = length(files2))
+totalpeople <- vector("list", "length" = length(files2))
+file_list <- vector("list", "length" = length(files2))
+waveNum <-vector("list", "length" = length(files2))
+vaccinations33to36 <- c(0,0,0,0)
+
+#test to see what values
+df <- read.csv(files2[[2]])
+unique(df$Q73)
+vlik1 <- df[df$Q73 == "Not at all likely ",]
+vlik  <- sum(vlik1$wt_final)
+
+for (i in seq_along(files2)) {
+  filename = files2[[i]]
+  # Read data in
+  dfage <- read.csv(filename)
+  df <- dfage[dfage$ppage <45,]
+  df$WAVE <- as.numeric(df$WAVE)
+  #take out those who skipped
+  df2 <- df[df$Q73 != "Skipped",]
+  
+  # select columns
+  length <- sum(df2$wt_final)
+  
+  #get count of all answers
+  vlik1 <- df2[df2$Q73 == "Very likely",]
+  new <- select(vlik1, c(Q73,wt_final))
+  test <- new[complete.cases(new),]
+  vlik  <- sum(test$wt_final)
+  
+  
+  somlik1 <- df2[df2$Q73 == "Somewhat likely",]
+  new2 <- select(somlik1, c(Q73,wt_final))
+  test2 <- new2[complete.cases(new2),]
+  somlik  <- sum(test2$wt_final)
+  
+  
+  notlik1 <- df2[df2$Q73 == "Not very likely",]
+  new3 <- select(notlik1, c(Q73,wt_final))
+  test3 <- new3[complete.cases(new3),]
+  notlik  <- sum(test3$wt_final)
+  
+  
+  defno1 <- df2[df2$Q73 == "Not at all likely ",]
+  new4 <- select(defno1, c(Q73,wt_final))
+  test4 <- new4[complete.cases(new4),]
+  defno  <- sum(test4$wt_final)
+  
+  waveNum1 <- mean(df$WAVE)
+  
+  #add to list
+  file_list[[i]] <- paste(filename)
+  totalpeople[[i]] <- paste(length)
+  verylikely[[i]] <- paste(vlik)
+  somewhatlikely[[i]] <- paste(somlik)
+  notlikely[[i]] <- paste(notlik)
+  defnotlikely[[i]] <- paste(defno)
+  waveNum[[i]] <- paste(waveNum1)
+}
+#merge
+WAVES33to36 <- do.call(rbind, Map(data.frame, Wave = waveNum, Vaccinated = vaccinations33to36, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely,FileName = file_list,NumofObserv = totalpeople))
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT for waves 37 until 67  AGE considered
+#--------------------------------------------------------
+files9 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios/Raw/37 to rest", pattern = "*.csv")
+#--------------------------------------------------------
+#----------------Create vectors for loop----------------------------------------
+
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files9))
+somewhatlikely <- vector("list", "length" = length(files9))
+notlikely <- vector("list", "length" = length(files9))
+defnotlikely <- vector("list", "length" = length(files9))
+totalpeople <- vector("list", "length" = length(files9))
+file_list <- vector("list", "length" = length(files9))
+vaccinationsRest <-  vector("list", "length" = length(files9))
+waveNummer <-vector("list", "length" = length(files9))
+
+#----------------Practice of Loop function----------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios/Raw/37 to rest")
+#test to see what values
+dftry <- read.csv(files9[[3]])
+unique(dftry$Q73)
+vlik1 <- dftry[dftry$Q73 == "Not at all likely ",]
+new <- select(vlik1, c(Q73,wt_final))
+test <- new[complete.cases(new),]
+
+#----------------Loop----------------------------------------
+
+for (i in seq_along(files9)) {
+  filename = files9[[i]]
+  # Read data in
+  dfage <- read.csv(filename)
+  df <- dfage[dfage$ppage <45,]
+  # select columns
+  
+  length <- sum(df$wt_final)
+  df$WAVE <- as.numeric(df$WAVE)
+  
+  #get count of all answers
+  HadVaccine1 <- df[df$Q107_1 == "Yes, I have received the vaccine",]
+  new <- select(HadVaccine1, c(Q107_1,wt_final))
+  test <- new[complete.cases(new),]
+  HadVaccine  <- sum(test$wt_final)
+  
+  vlik1 <- df[df$Q73 == "Very likely",]
+  new1 <- select(vlik1, c(Q73,wt_final))
+  test1 <- new1[complete.cases(new1),]
+  vlik  <- sum(test1$wt_final)
+  
+  somlik1 <- df[df$Q73 == "Somewhat likely",]
+  new2 <- select(somlik1, c(Q73,wt_final))
+  test2 <- new2[complete.cases(new2),]
+  somlik  <- sum(test2$wt_final)
+  
+  notlik1 <- df[df$Q73 == "Not very likely",]
+  new3 <- select(notlik1, c(Q73,wt_final))
+  test3 <- new3[complete.cases(new3),]
+  notlik  <- sum(test3$wt_final)
+  
+  defno1 <- df[df$Q73 == "Not at all likely ",]
+  new4 <- select(defno1, c(Q73,wt_final))
+  test4 <- new4[complete.cases(new4),]
+  defno  <- sum(test4$wt_final)
+  
+  waveNumm <- mean(df$WAVE)
+  
+  #add to list
+  file_list[[i]] <- paste(filename)
+  totalpeople[[i]] <- paste(length)
+  verylikely[[i]] <- paste(vlik)
+  somewhatlikely[[i]] <- paste(somlik)
+  notlikely[[i]] <- paste(notlik)
+  defnotlikely[[i]] <- paste(defno)
+  vaccinationsRest[[i]] <- paste(HadVaccine)
+  waveNummer[[i]] <- paste(waveNumm)
+}
+#merge
+WAVESRest <- do.call(rbind, Map(data.frame,Wave =waveNummer,  Vaccinated = vaccinationsRest, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely,FileName = file_list,NumofObserv = totalpeople))
+#--------------------------------------------------------
+#save all
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys/Axios")
+#wave 34 has been set as wave 33 for some reason? despite different data
+WAVES33to36["Wave"][WAVES33to36$NumofObserv == "459.1777",] <- "34"
+
+write.csv(AllMissingValues, file = "missingvaluesAxiosandRespondents.csv")
+write.csv(WAVES33to36, file = "Waves33util36.csv")
+write.csv(WAVESRest, file = "Waves37andmore.csv")
+
+
+#merge
+total <- rbind(WAVES33to36, WAVESRest)
+
+#make numeric
+total$Vaccinated = as.numeric(total$Vaccinated)
+total$Vlikely = as.numeric(total$Vlikely)
+total$SMLikely = as.numeric(total$SMLikely )
+total$NotLikely = as.numeric(total$NotLikely)
+total$DefnoLikely = as.numeric(total$DefnoLikely)
+
+str(total)
+total$CheckTotal <- total$Vaccinated+total$Vlikely+total$SMLikely+total$NotLikely+total$DefnoLikely
+
+#--------------------------------------------------------
+#SENTIMENT CALCULATION
+#--------------------------------------------------------
+
+total$Sentiment <-((1*total$Vaccinated)+(0.95*total$Vlikely )+(0.75*total$SMLikely)+(0.25*total$NotLikely)+(0.05*total$DefnoLikely))/(total$CheckTotal)
+
+write.csv(total, file = "Until45Sentiment.csv")
+
+
+

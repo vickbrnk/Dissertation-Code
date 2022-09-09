@@ -1,0 +1,420 @@
+library("reshape2")
+library("ggplot2")
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#--------------------------------------------------------
+#Merge all together
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+df <- read_csv("RcAFINNSentiment.csv")
+df2 <- read_csv("RcBingSentiment.csv")
+df3 <- read_csv("RcNRCSentiment.csv")
+df4 <- read_csv("RcTxtBlbSentiment.csv")
+df5 <- read_csv("RcVADERSentiment.csv")
+
+#must be 60
+t <- merge(df, df2, by = "TimeSR")
+t2 <- merge(t, df3, by = "TimeSR")
+t3 <- merge(t2, df4, by = "TimeSR")
+Rc <- merge(t3, df5, by = "TimeSR")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+df <- read_csv("RsAFINNSentiment.csv")
+df2 <- read_csv("RsBingSentiment.csv")
+df3 <- read_csv("RsNRCSentiment.csv")
+df4 <- read_csv("RsTxtBlbSentiment.csv")
+df5 <- read_csv("RsVADERSentiment.csv")
+
+t <- merge(df, df2, by = "TimeSR")
+t2 <- merge(t, df3, by = "TimeSR")
+t3 <- merge(t2, df4, by = "TimeSR")
+Rs <- merge(t3, df5, by = "TimeSR")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+df <- read_csv("TqAFINNSentiment.csv")
+df2 <- read_csv("TqBingSentiment.csv")
+df3 <- read_csv("TqNRCSentiment.csv")
+df4 <- read_csv("TqTxtBlbSentiment.csv")
+df5 <- read_csv("TqVADERSentiment.csv")
+
+t <- merge(df, df2, by = "TimeSR")
+t2 <- merge(t, df3, by = "TimeSR")
+t3 <- merge(t2, df4, by = "TimeSR")
+Tq <- merge(t3, df5, by = "TimeSR")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+df <- read_csv("TnqAFINNSentiment.csv")
+df2 <- read_csv("TnqBingSentiment.csv")
+df3 <- read_csv("TnqNRCSentiment.csv")
+df4 <- read_csv("TnqTxtBlbSentiment.csv")
+df5 <- read_csv("TnqVADERSentiment.csv")
+
+t <- merge(df, df2, by = "TimeSR")
+t2 <- merge(t, df3, by = "TimeSR")
+t3 <- merge(t2, df4, by = "TimeSR")
+Tnq <- merge(t3, df5, by = "TimeSR")
+
+#--------------------------------------------------------
+#Merge all together
+#--------------------------------------------------------
+final <- merge(Rs,Rc, by = "TimeSR")
+final2 <- merge(final,Tq, by = "TimeSR")
+finalFinal <- merge(final2,Tnq, by = "TimeSR")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+write_csv(finalFinal, "AllSMD.csv")
+
+final <- select(finalFinal, -c(..1))
+
+Details <- finalFinal %>%
+  summarise(across(everything(), list(mean = mean, sd = sd, min=min, max = max, median = median)))
+
+
+
+#select interesting values
+DetailsMedian <- Details[ , grepl( "median" , names( Details ) ) ]
+DetailsSD <- Details[ , grepl( "sd" , names( Details ) ) ]
+DetailsMin <-Details[ , grepl( "min" , names( Details ) ) ]
+DetailsMax <-Details[ , grepl( "max" , names( Details ) ) ]
+
+Range <- merge(Min,Max, by = "Name")
+Range$range <- Range$Max - Range$Min
+FinalRange <- select(Range, c(Name, range))
+
+#transpose median
+data <- as.data.frame(t(DetailsMedian))
+df <- tibble::rownames_to_column(data, "Name")
+Median <- df %>%
+  rename(Name = Name, Median = V1)
+Median$Name <- gsub("_median", "", Median$Name)
+
+write_csv(Median, "SMDMedian.csv") 
+#transpose sd
+data <- as.data.frame(t(DetailsSD))
+df2 <- tibble::rownames_to_column(data, "Name")
+SD <- df2 %>%
+  rename(Name = Name, StandardDev = V1)
+SD$Name <- gsub("_sd", "", SD$Name)
+
+#transpose mean
+data <- as.data.frame(t(DetailsMean))
+df2 <- tibble::rownames_to_column(data, "Name")
+Mean <- df2 %>%
+  rename(Name = Name, Mean = V1)
+Mean$Name <- gsub("_mean", "", Mean$Name)
+#transpose min
+data <- as.data.frame(t(DetailsMin))
+df2 <- tibble::rownames_to_column(data, "Name")
+Min <- df2 %>%
+  rename(Name = Name, Min = V1)
+Min$Name <- gsub("_min", "", Min$Name)
+#transpose max
+data <- as.data.frame(t(DetailsMax))
+df2 <- tibble::rownames_to_column(data, "Name")
+Max <- df2 %>%
+  rename(Name = Name, Max = V1)
+Max$Name <- gsub("_max", "", Max$Name)
+
+
+#merge these intersting values together
+DetailsFInal <- merge(SD, Median, by = "Name")
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+write_csv(DetailsFInal, "SMDmedianandSD.csv")
+
+#--------------------------------------------------------
+#Fixing Median File
+#--------------------------------------------------------
+
+fix <- Median[-1,]
+fix$Lexicon <- fix$Name
+#fix
+fix$Lexicon <- gsub("Rs_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Rc_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tnq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_NoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_Em", "", fix$Lexicon)
+fix$Lexicon <- gsub("WT_", "", fix$Lexicon)
+
+fix$Lexicon <- gsub("Afinn", "AFINN", fix$Lexicon)
+fix$Lexicon <- gsub("Vader", "VADER", fix$Lexicon)
+fix$Lexicon <- gsub("Bing", "BING", fix$Lexicon)
+fix$Lexicon <- gsub("Nrc", "NRC", fix$Lexicon)
+#--------------------------------------------------------
+
+fix$DataSource <- fix$Name
+
+fix$DataSource <- gsub("_AFINN_", "", fix$DataSource)
+fix$DataSource <- gsub("_Afinn_", "", fix$DataSource)
+fix$DataSource <- gsub("_Bing_", "", fix$DataSource)
+fix$DataSource <- gsub("_Nrc_", "", fix$DataSource)
+fix$DataSource <- gsub("_VADER_", "", fix$DataSource)
+fix$DataSource <- gsub("_Vader_", "", fix$DataSource)
+fix$DataSource <- gsub("_TxtBlb_", "", fix$DataSource)
+fix$DataSource <- gsub("_NRC_", "", fix$DataSource)
+fix$DataSource <- gsub("LemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("LemEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemEm", "", fix$DataSource)
+fix$DataSource <- gsub("NoEm", "", fix$DataSource)
+fix$DataSource <- gsub("Em", "", fix$DataSource)
+fix$DataSource <- gsub("WT_", "", fix$DataSource)
+
+#--------------------------------------------------------
+fix$PrePro <- fix$Name
+
+fix$PrePro <- gsub("_AFINN_", "", fix$PrePro)
+fix$PrePro <- gsub("_Afinn_", "", fix$PrePro)
+fix$PrePro <- gsub("_Bing_", "", fix$PrePro)
+fix$PrePro <- gsub("_Nrc_", "", fix$PrePro)
+fix$PrePro <- gsub("NRC", "", fix$PrePro)
+fix$PrePro <- gsub("_VADER_", "", fix$PrePro)
+fix$PrePro <- gsub("_Vader_", "", fix$PrePro)
+fix$PrePro <- gsub("_TxtBlb_", "", fix$PrePro)
+fix$PrePro <- gsub("Rs", "", fix$PrePro)
+fix$PrePro <- gsub("Rc", "", fix$PrePro)
+fix$PrePro <- gsub("Tnq", "", fix$PrePro)
+fix$PrePro <- gsub("Tq", "", fix$PrePro)
+fix$PrePro <- gsub("_", "", fix$PrePro)
+fix$PrePro <- gsub("WT", "WT_", fix$PrePro)
+
+write_csv(fix, "TriedWiderMedian.csv")
+#--------------------------------------------------------
+
+#--------------------------------------------------------
+#Fixing SD File
+#--------------------------------------------------------
+
+fix2 <- SD[-1,]
+fix2$Lexicon <- fix2$Name
+#fix2
+fix2$Lexicon <- gsub("Rs_", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("Rc_", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("Tnq_", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("Tq_", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_LemNoEm", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_LemEm", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_StemNoEm", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_StemEm", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_NoEm", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("_Em", "", fix2$Lexicon)
+fix2$Lexicon <- gsub("WT_", "", fix2$Lexicon)
+
+fix2$Lexicon <- gsub("Afinn", "AFINN", fix2$Lexicon)
+fix2$Lexicon <- gsub("Vader", "VADER", fix2$Lexicon)
+fix2$Lexicon <- gsub("Bing", "BING", fix2$Lexicon)
+fix2$Lexicon <- gsub("Nrc", "NRC", fix2$Lexicon)
+#--------------------------------------------------------
+
+fix2$DataSource <- fix2$Name
+
+fix2$DataSource <- gsub("_AFINN_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_Afinn_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_Bing_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_Nrc_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_VADER_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_Vader_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_TxtBlb_", "", fix2$DataSource)
+fix2$DataSource <- gsub("_NRC_", "", fix2$DataSource)
+fix2$DataSource <- gsub("LemNoEm", "", fix2$DataSource)
+fix2$DataSource <- gsub("LemEm", "", fix2$DataSource)
+fix2$DataSource <- gsub("StemNoEm", "", fix2$DataSource)
+fix2$DataSource <- gsub("StemEm", "", fix2$DataSource)
+fix2$DataSource <- gsub("NoEm", "", fix2$DataSource)
+fix2$DataSource <- gsub("Em", "", fix2$DataSource)
+fix2$DataSource <- gsub("WT_", "", fix2$DataSource)
+
+#--------------------------------------------------------
+fix2$PrePro <- fix2$Name
+
+fix2$PrePro <- gsub("_AFINN_", "", fix2$PrePro)
+fix2$PrePro <- gsub("_Afinn_", "", fix2$PrePro)
+fix2$PrePro <- gsub("_Bing_", "", fix2$PrePro)
+fix2$PrePro <- gsub("_Nrc_", "", fix2$PrePro)
+fix2$PrePro <- gsub("NRC", "", fix2$PrePro)
+fix2$PrePro <- gsub("_VADER_", "", fix2$PrePro)
+fix2$PrePro <- gsub("_Vader_", "", fix2$PrePro)
+fix2$PrePro <- gsub("_TxtBlb_", "", fix2$PrePro)
+fix2$PrePro <- gsub("Rs", "", fix2$PrePro)
+fix2$PrePro <- gsub("Rc", "", fix2$PrePro)
+fix2$PrePro <- gsub("Tnq", "", fix2$PrePro)
+fix2$PrePro <- gsub("Tq", "", fix2$PrePro)
+fix2$PrePro <- gsub("_", "", fix2$PrePro)
+fix2$PrePro <- gsub("WT", "WT_", fix2$PrePro)
+
+write_csv(fix2, "TriedWiderSD.csv")
+#--------------------------------------------------------
+
+#--------------------------------------------------------
+#Fixing Mean File
+#--------------------------------------------------------
+
+fix <- FinalRange
+fix$Lexicon <- fix$Name
+#fix
+fix$Lexicon <- gsub("Rs_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Rc_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tnq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_NoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_Em", "", fix$Lexicon)
+fix$Lexicon <- gsub("WT_", "", fix$Lexicon)
+
+fix$Lexicon <- gsub("Afinn", "AFINN", fix$Lexicon)
+fix$Lexicon <- gsub("Vader", "VADER", fix$Lexicon)
+fix$Lexicon <- gsub("Bing", "BING", fix$Lexicon)
+fix$Lexicon <- gsub("Nrc", "NRC", fix$Lexicon)
+#--------------------------------------------------------
+
+fix$DataSource <- fix$Name
+
+fix$DataSource <- gsub("_AFINN_", "", fix$DataSource)
+fix$DataSource <- gsub("_Afinn_", "", fix$DataSource)
+fix$DataSource <- gsub("_Bing_", "", fix$DataSource)
+fix$DataSource <- gsub("_Nrc_", "", fix$DataSource)
+fix$DataSource <- gsub("_VADER_", "", fix$DataSource)
+fix$DataSource <- gsub("_Vader_", "", fix$DataSource)
+fix$DataSource <- gsub("_TxtBlb_", "", fix$DataSource)
+fix$DataSource <- gsub("_NRC_", "", fix$DataSource)
+fix$DataSource <- gsub("LemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("LemEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemEm", "", fix$DataSource)
+fix$DataSource <- gsub("NoEm", "", fix$DataSource)
+fix$DataSource <- gsub("Em", "", fix$DataSource)
+fix$DataSource <- gsub("WT_", "", fix$DataSource)
+
+#--------------------------------------------------------
+fix$PrePro <- fix$Name
+
+fix$PrePro <- gsub("_AFINN_", "", fix$PrePro)
+fix$PrePro <- gsub("_Afinn_", "", fix$PrePro)
+fix$PrePro <- gsub("_Bing_", "", fix$PrePro)
+fix$PrePro <- gsub("_Nrc_", "", fix$PrePro)
+fix$PrePro <- gsub("NRC", "", fix$PrePro)
+fix$PrePro <- gsub("_VADER_", "", fix$PrePro)
+fix$PrePro <- gsub("_Vader_", "", fix$PrePro)
+fix$PrePro <- gsub("_TxtBlb_", "", fix$PrePro)
+fix$PrePro <- gsub("Rs", "", fix$PrePro)
+fix$PrePro <- gsub("Rc", "", fix$PrePro)
+fix$PrePro <- gsub("Tnq", "", fix$PrePro)
+fix$PrePro <- gsub("Tq", "", fix$PrePro)
+fix$PrePro <- gsub("_", "", fix$PrePro)
+fix$PrePro <- gsub("WT", "WT_", fix$PrePro)
+
+write_csv(fix, "TriedWiderRange.csv")
+
+#--------------------------------------------------------
+#---Loop for negative positive and  neutral-----------------------------
+
+#--------------------------------------------------------
+Loop <- select(Details, -c(TimeSR))
+listcol <- colnames(Loop)
+
+#-store values
+Name <- vector("list", "length" = length(listcol))
+negative <- vector("list", "length" = length(listcol))
+positive <- vector("list", "length" = length(listcol))
+neutral <- vector("list", "length" = length(listcol))
+Negpercentage <- vector("list", "length" = length(listcol))
+Pospercentage <- vector("list", "length" = length(listcol))
+Neutralpercentage <- vector("list", "length" = length(listcol))
+
+k= 1
+
+for(i in listcol) { 
+  Column <- Loop[i]
+  #get values
+  pos <- length(Column[Column>0.55,])
+  neg <- length(Column[Column<0.45,])
+  neu <- length(Column[Column <=0.55 & Column >= 0.45,])
+  #percentages
+  ppec <- (pos/77)*100
+  negpec <- (neg/77)*100
+  neutpec <- (neu/77)*100
+  #paste
+  Name[[k]] <- paste(i)
+  negative[[k]] <- paste(neg)
+  positive[[k]] <- paste(pos)
+  neutral[[k]] <- paste(neu)
+  Negpercentage[[k]] <- paste(negpec)
+  Pospercentage[[k]] <- paste(ppec)
+  Neutralpercentage[[k]] <- paste(neutpec)
+  
+  k= k+1
+  
+}
+
+df <- do.call(rbind, Map(data.frame, File_Name=Name, Neg_Count=negative, Pos_Count=positive, Neu_Count=neutral, Neg_Percentage =Negpercentage, Pos_Percentage=Pospercentage, Neural_Percentage=Neutralpercentage))
+
+fix <- df
+fix$Lexicon <- fix$File_Name
+#fix
+fix$Lexicon <- gsub("Rs_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Rc_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tnq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("Tq_", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_LemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemNoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_StemEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_NoEm", "", fix$Lexicon)
+fix$Lexicon <- gsub("_Em", "", fix$Lexicon)
+fix$Lexicon <- gsub("WT_", "", fix$Lexicon)
+
+fix$Lexicon <- gsub("Afinn", "AFINN", fix$Lexicon)
+fix$Lexicon <- gsub("Vader", "VADER", fix$Lexicon)
+fix$Lexicon <- gsub("Bing", "BING", fix$Lexicon)
+fix$Lexicon <- gsub("Nrc", "NRC", fix$Lexicon)
+#--------------------------------------------------------
+
+fix$DataSource <- fix$File_Name
+
+fix$DataSource <- gsub("_AFINN_", "", fix$DataSource)
+fix$DataSource <- gsub("_Afinn_", "", fix$DataSource)
+fix$DataSource <- gsub("_Bing_", "", fix$DataSource)
+fix$DataSource <- gsub("_Nrc_", "", fix$DataSource)
+fix$DataSource <- gsub("_VADER_", "", fix$DataSource)
+fix$DataSource <- gsub("_Vader_", "", fix$DataSource)
+fix$DataSource <- gsub("_TxtBlb_", "", fix$DataSource)
+fix$DataSource <- gsub("_NRC_", "", fix$DataSource)
+fix$DataSource <- gsub("LemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("LemEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemNoEm", "", fix$DataSource)
+fix$DataSource <- gsub("StemEm", "", fix$DataSource)
+fix$DataSource <- gsub("NoEm", "", fix$DataSource)
+fix$DataSource <- gsub("Em", "", fix$DataSource)
+fix$DataSource <- gsub("WT_", "", fix$DataSource)
+
+#--------------------------------------------------------
+fix$PrePro <- fix$File_Name
+
+fix$PrePro <- gsub("_AFINN_", "", fix$PrePro)
+fix$PrePro <- gsub("_Afinn_", "", fix$PrePro)
+fix$PrePro <- gsub("_Bing_", "", fix$PrePro)
+fix$PrePro <- gsub("_Nrc_", "", fix$PrePro)
+fix$PrePro <- gsub("NRC", "", fix$PrePro)
+fix$PrePro <- gsub("_VADER_", "", fix$PrePro)
+fix$PrePro <- gsub("_Vader_", "", fix$PrePro)
+fix$PrePro <- gsub("_TxtBlb_", "", fix$PrePro)
+fix$PrePro <- gsub("Rs", "", fix$PrePro)
+fix$PrePro <- gsub("Rc", "", fix$PrePro)
+fix$PrePro <- gsub("Tnq", "", fix$PrePro)
+fix$PrePro <- gsub("Tq", "", fix$PrePro)
+fix$PrePro <- gsub("_", "", fix$PrePro)
+fix$PrePro <- gsub("WT", "WT_", fix$PrePro)
+
+
+write_csv(fix, "PercentagesSMD.csv")
+
+

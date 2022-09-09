@@ -1,0 +1,298 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(textclean)
+#--------------------------------------------------------
+#Pre-Processing Time!
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/ForPre-Pr")
+dfTw <- read_csv("FinalYesSourceTweet.csv")
+
+#copy column for processed text
+dfTw$FinalText <- dfTw$Combine
+
+#1.	Lowercase
+dfTw$FinalText  <- tolower(dfTw$FinalText)
+
+#2.	Remove Twitter Handles (@)
+dfTw$FinalText  <- gsub("@\\w+", "", dfTw$FinalText)
+
+#3.	Remove hashtags
+dfTw$FinalText  <- gsub("#\\w+", "", dfTw$FinalText)
+
+#4. Remove html sequences (&gt)
+dfTw$FinalText  <- gsub("&\\w+", "", dfTw$FinalText )
+
+#5.	Remove URLs
+dfTw$FinalText <- gsub("https?://.+", "", dfTw$FinalText)
+
+#6.	Replace contractions
+#117 contractions rather than the 70 default
+cont2<- read_csv("contractions.csv")
+#fix the ' difference
+cont2$contraction <-gsub("'", "’", cont2$contraction)
+
+dfTw$FinalText  <- replace_contraction(dfTw$FinalText)
+dfTw$FinalText  <- replace_contraction(dfTw$FinalText,contraction.key = cont2)
+
+#7.	Remove emojis or encode?
+#remove
+dfTw$NOemojiTxt <- gsub("[^\x01-\x7F]", "", dfTw$FinalText)
+
+#encode emojis
+dfTw$EmojiText <- replace_emoji(dfTw$FinalText,)
+#some encoded, others not, in format of <XX>, remove these
+dfTw$EmojiText  <- gsub("<.*?>", "", dfTw$EmojiText)
+
+#8.Remove punctuation
+dfTw$NOemojiTxt <- gsub("[[:punct:]]", "", dfTw$NOemojiTxt)
+dfTw$EmojiText  <- gsub("[[:punct:]]", "", dfTw$EmojiText)
+
+#9	Remove numbers & special characters
+dfTw$NOemojiTxt <- gsub("[[:digit:]]", "", dfTw$NOemojiTxt)
+dfTw$EmojiText  <- gsub("[[:digit:]]", "", dfTw$EmojiText)
+
+#10. Remove anything but standard ASCII just in case
+dfTw$NOemojiTxt <- gsub("[^\x01-\x7F]", "", dfTw$NOemojiTxt)
+dfTw$EmojiText  <- gsub("[^\x01-\x7F]", "", dfTw$EmojiText)
+
+#11.	Remove spaces and new lines
+dfTw$NOemojiTxt <- gsub("\n", " ", dfTw$NOemojiTxt)
+dfTw$NOemojiTxt <- gsub("^\\s+", "", dfTw$NOemojiTxt)
+dfTw$NOemojiTxt <- gsub("\\s+$", "", dfTw$NOemojiTxt)
+dfTw$NOemojiTxt <- gsub("[ |\t]+", " ", dfTw$NOemojiTxt)
+
+dfTw$EmojiText <- gsub("\n", " ", dfTw$EmojiText)
+dfTw$EmojiText <- gsub("^\\s+", "", dfTw$EmojiText)
+dfTw$EmojiText <- gsub("\\s+$", "", dfTw$EmojiText)
+dfTw$EmojiText <- gsub("[ |\t]+", " ", dfTw$EmojiText)
+
+
+#12.	All English language
+library("cld3")
+dfTw$language <- detect_language(dfTw$NOemojiTxt)
+dfTw$languageEmoji <- detect_language(dfTw$EmojiText)
+
+#use non emoji observations, check if make a difference
+all.equal(dfTw$language,dfTw$languageEmoji)
+#""'is.NA' value mismatch: 7277 in current 7678 in target"
+#not the same
+sapply(dfTw , function(x) sum(is.na(x)))
+#less missing values with emoji language at 7678, languageEmoji at 7277
+
+unique(dfTw$language)
+unique(dfTw$languageEmoji)
+otherlang <- dfTw[dfTw$language != "en",]
+nrow(otherlang)
+sapply(otherlang , function(x) sum(is.na(x)))
+#12187 some mixed with other language and some appear to be just too short to be classified
+otherlang2 <- dfTw[dfTw$languageEmoji != "en",]
+nrow(otherlang2)
+sapply(otherlang2 , function(x) sum(is.na(x)))
+#11636 some mixed with other language and some appear to be just too short to be classified
+
+#not just english
+dfTw2 <- dfTw[dfTw$language == "en",]
+nrow(dfTw2)
+#264969
+dfTw3 <- dfTw[dfTw$languageEmoji == "en",]
+nrow(dfTw3)
+#265119
+#pick emoji since less NA values
+Englishdf <- select(dfTw3, -c(language,languageEmoji))
+sapply(Englishdf , function(x) sum(is.na(x)))
+Englishdf2 <- Englishdf[complete.cases(Englishdf),]
+nrow(Englishdf2)
+#257842/269478, 0.9568202228, about 4% reduction
+
+
+#13.	Remove stop words
+library(tm)
+Englishdf2$EmojiText = removeWords(Englishdf2$EmojiText, stopwords("english"))
+Englishdf2$NOemojiTxt = removeWords(Englishdf2$NOemojiTxt, stopwords("english"))
+
+#14.	Remove spaces and new lines
+Englishdf2$NOemojiTxt <- gsub("\n", " ", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("^\\s+", "", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("\\s+$", "", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("[ |\t]+", " ", Englishdf2$NOemojiTxt)
+
+Englishdf2$EmojiText <- gsub("\n", " ", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("^\\s+", "", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("\\s+$", "", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("[ |\t]+", " ", Englishdf2$EmojiText)
+
+#15.	Lemmatization
+library(textstem)
+Englishdf2$LemEmojitxt <- lemmatize_strings(Englishdf2$EmojiText)
+Englishdf2$LemNOEmojitxt <- lemmatize_strings(Englishdf2$NOemojiTxt)
+
+
+#some are numbers, cus base of second is 2
+num1 <- Englishdf2[grepl('[[:digit:]]', Englishdf2$LemEmojitxt),]
+nrow(num1)
+#6249, 6249/257842 = 0.02423577229, affects about 2.4% of the dataset
+num2 <- Englishdf2[grepl('[[:digit:]]', Englishdf2$LemNOEmojitxt),]
+nrow(num1)
+#6249, 6249/257842 = 0.02423577229, affects about 2.5=4% of the dataset
+
+#numbers?, remove these and note this in the steps
+Englishdf2$LemEmojitxt   <- gsub("[[:digit:]]", "", Englishdf2$LemEmojitxt)
+Englishdf2$LemNOEmojitxt  <- gsub("[[:digit:]]", "", Englishdf2$LemNOEmojitxt )
+
+#16.	Stemming
+library("SnowballC")
+Englishdf2$StemEmojitxt <- stemDocument(Englishdf2$EmojiText)
+Englishdf2$StemNOEmojitxt <- stemDocument(Englishdf2$NOemojiTxt)
+
+#17.	Remove spaces and new lines
+#NOemojiTxt
+Englishdf2$NOemojiTxt <- gsub("\n", " ", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("^\\s+", "", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("\\s+$", "", Englishdf2$NOemojiTxt)
+Englishdf2$NOemojiTxt <- gsub("[ |\t]+", " ", Englishdf2$NOemojiTxt)
+
+#EmojiText
+Englishdf2$EmojiText <- gsub("\n", " ", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("^\\s+", "", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("\\s+$", "", Englishdf2$EmojiText)
+Englishdf2$EmojiText <- gsub("[ |\t]+", " ", Englishdf2$EmojiText)
+
+#LemEmojitxt
+Englishdf2$LemEmojitxt <- gsub("\n", " ", Englishdf2$LemEmojitxt)
+Englishdf2$LemEmojitxt <- gsub("^\\s+", "", Englishdf2$LemEmojitxt)
+Englishdf2$LemEmojitxt <- gsub("\\s+$", "", Englishdf2$LemEmojitxt)
+Englishdf2$LemEmojitxt <- gsub("[ |\t]+", " ", Englishdf2$LemEmojitxt)
+
+#LemNOEmojitxt
+Englishdf2$LemNOEmojitxt <- gsub("\n", " ", Englishdf2$LemNOEmojitxt)
+Englishdf2$LemNOEmojitxt <- gsub("^\\s+", "", Englishdf2$LemNOEmojitxt)
+Englishdf2$LemNOEmojitxt <- gsub("\\s+$", "", Englishdf2$LemNOEmojitxt)
+Englishdf2$LemNOEmojitxt <- gsub("[ |\t]+", " ", Englishdf2$LemNOEmojitxt)
+
+#StemNOEmojitxt
+Englishdf2$StemNOEmojitxt <- gsub("\n", " ", Englishdf2$StemNOEmojitxt)
+Englishdf2$StemNOEmojitxt <- gsub("^\\s+", "", Englishdf2$StemNOEmojitxt)
+Englishdf2$StemNOEmojitxt <- gsub("\\s+$", "", Englishdf2$StemNOEmojitxt)
+Englishdf2$StemNOEmojitxt <- gsub("[ |\t]+", " ", Englishdf2$StemNOEmojitxt)
+
+#StemEmojitxt
+Englishdf2$StemEmojitxt <- gsub("\n", " ", Englishdf2$StemEmojitxt)
+Englishdf2$StemEmojitxt <- gsub("^\\s+", "", Englishdf2$StemEmojitxt)
+Englishdf2$StemEmojitxt <- gsub("\\s+$", "", Englishdf2$StemEmojitxt)
+Englishdf2$StemEmojitxt <- gsub("[ |\t]+", " ", Englishdf2$StemEmojitxt)
+
+#save so far
+write_csv(Englishdf2, file = "PauseYesSourceTweet.csv")
+
+#18.	Remove posts with less than 4 words
+#check length of text
+Englishdf2$StemEmojitxt <- as.character(Englishdf2$StemEmojitxt)
+Englishdf2$LENStemEmojitxt<- str_count(Englishdf2$StemEmojitxt,'\\w+')
+#check length of text
+Englishdf2$StemNOEmojitxt <- as.character(Englishdf2$StemNOEmojitxt)
+Englishdf2$LENStemNOEmojitxt <- str_count(Englishdf2$StemNOEmojitxt,'\\w+')
+#check length of text
+Englishdf2$LemEmojitxt <- as.character(Englishdf2$LemEmojitxt)
+Englishdf2$LENLemEmojitxt<- str_count(Englishdf2$LemEmojitxt,'\\w+')
+#check length of text
+Englishdf2$LemNOEmojitxt <- as.character(Englishdf2$LemNOEmojitxt)
+Englishdf2$LENLemNOEmojitxt <- str_count(Englishdf2$LemNOEmojitxt,'\\w+')
+#check length of text
+Englishdf2$EmojiText <- as.character(Englishdf2$EmojiText)
+Englishdf2$LENEmojitxt<- str_count(Englishdf2$EmojiText,'\\w+')
+#check length of text
+Englishdf2$NOemojiTxt <- as.character(Englishdf2$NOemojiTxt)
+Englishdf2$LENLNOEmoji <- str_count(Englishdf2$NOemojiTxt,'\\w+')
+
+summary(Englishdf2)
+#average is 16 words per post for all, with a median of 16. Lowest appears to be in LENLemNOEmojitxt
+
+test<- Englishdf2[Englishdf2$LENStemNOEmojitxt<3,]
+nrow(test)
+#2488/257842 = 0.00964932012,  almost 1 %
+summary(test)
+#most messages incoherent
+test2<- Englishdf2[Englishdf2$LENStemNOEmojitxt<4,]
+nrow(test2)
+#5054/257842 = 0.01960115109,  almost 2 %
+#incoherent messages
+
+#-----------
+Final <- Englishdf2[Englishdf2$LENStemNOEmojitxt>4,]
+nrow(Final)
+#248598
+# reduction of 248598/269478=0.92251686594, 0.07748313406 about 7.7%
+#save so far
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/After prep")
+write_csv(Final, file = "FinalSourceTweet.csv")
+
+
+#---------------------
+#generate word cloud
+#---------------------
+library(tidytext)
+library(wordcloud)
+#NOemojiTxt, about 80 around 3000
+cloudNOemojiTxt <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, NOemojiTxt) %>% anti_join(stop_words)
+
+cloudNOemojiTxt1 <- cloudNOemojiTxt %>% count(word, sort=TRUE)
+
+cloudNOemojiTxt1 %>% with(wordcloud(word, n, 
+                                    min.freq=3000, random.order=FALSE))
+
+#EmojiText
+cloudEmojiText <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, EmojiText) %>% anti_join(stop_words)
+
+cloudEmojiText1 <- cloudEmojiText %>% count(word, sort=TRUE)
+
+cloudEmojiText1 %>% with(wordcloud(word, n, 
+                                   min.freq=3000, random.order=FALSE))
+
+#LemEmojitxt
+cloudLemEmojitxt <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, LemEmojitxt) %>% anti_join(stop_words)
+
+cloudLemEmojitxt1 <- cloudLemEmojitxt %>% count(word, sort=TRUE)
+
+cloudLemEmojitxt1 %>% with(wordcloud(word, n, 
+                                     min.freq=3000, random.order=FALSE))
+
+#LemNOEmojitxt
+cloudLemNOEmojitxt <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, LemNOEmojitxt) %>% anti_join(stop_words)
+
+cloudLemNOEmojitxt1 <- cloudLemNOEmojitxt %>% count(word, sort=TRUE)
+
+cloudLemNOEmojitxt1 %>% with(wordcloud(word, n, 
+                                       min.freq=3000, random.order=FALSE))
+
+#StemNOEmojitxt
+cloudStemNOEmojitxt <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, StemNOEmojitxt) %>% anti_join(stop_words)
+
+cloudStemNOEmojitxt1 <- cloudStemNOEmojitxt %>% count(word, sort=TRUE)
+
+cloudStemNOEmojitxt1 %>% with(wordcloud(word, n, 
+                                        min.freq=3000, random.order=FALSE))
+
+#StemEmojitxt
+cloudStemEmojitxt <- Final %>% 
+  mutate(linenumber=row_number()) %>% 
+  unnest_tokens(word, StemEmojitxt) %>% anti_join(stop_words)
+
+cloudStemEmojitxt1 <- cloudStemEmojitxt %>% count(word, sort=TRUE)
+
+cloudStemEmojitxt1 %>% with(wordcloud(word, n, 
+                                      min.freq=3000, random.order=FALSE))
+
+
+

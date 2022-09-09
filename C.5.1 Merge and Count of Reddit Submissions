@@ -1,0 +1,182 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+
+#--------------------------------------------------------
+#Merge the files together
+#--------------------------------------------------------
+#read in the four paths of the four queries
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query1", pattern = "*.csv")
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query2", pattern = "*.csv")
+files3 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query3", pattern = "*.csv")
+files4 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query4", pattern = "*.csv")
+
+all.equal(files,files2)
+all.equal(files2,files3)
+all.equal(files3,files4)
+#all true
+
+#create lists to store extraxcted info
+numvalues_list <- vector("list", "length" = length(files))
+file_list <- vector("list", "length" = length(files))
+
+for (i in seq_along(files)) {
+  #get the names
+  filename = files[[i]]
+  filename2 = files2[[i]]
+  filename3 = files3[[i]]
+  filename4 = files4[[i]]
+  
+  # Read data in
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query1")
+  df <- read.csv(filename)
+  print(nrow(df))
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query2")
+  df2 <- read.csv(filename2)
+  print(nrow(df2))
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query3")
+  df3 <- read.csv(filename3)
+  print(nrow(df3))
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query4")
+  df4 <- read.csv(filename4)
+  print(nrow(df4))
+  
+  #check if all equal, then merge
+  dfmerge1 <- rbind(df,df2)
+  dfmerge2 <- rbind(dfmerge1,df3)
+  dfTogether <- rbind(dfmerge2,df4)
+  
+  #add column for week variable
+  timeSRvar <- gsub(".csv", "", filename)
+  timeSRvar2 <- gsub("_", ".", timeSRvar)
+  dfTogether$TimeSR <- timeSRvar2
+  
+  # count rows and print
+  length <- nrow(dfTogether)
+  print(length)
+  setwd("//Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Merged")
+  write.csv(dfTogether, file = paste(timeSRvar,"csv", sep = "."))
+}
+
+
+#--------------------------------------------------------
+#Get the count and averages of all Reddit posts
+#--------------------------------------------------------
+
+#create lists to store extraxcted info
+Total <- vector("list", "length" = length(files))
+file_list <- vector("list", "length" = length(files))
+Query1 <- vector("list", "length" = length(files))
+Query2 <- vector("list", "length" = length(files))
+Query3 <- vector("list", "length" = length(files))
+Query4 <- vector("list", "length" = length(files))
+na_list <- vector("list", "length" = length(files))
+
+for (i in seq_along(files)) {
+  #get the names
+  filename = files[[i]]
+  filename2 = files2[[i]]
+  filename3 = files3[[i]]
+  filename4 = files4[[i]]
+  
+  # Read data in
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query1")
+  df <- read.csv(filename)
+  lengthdf <- nrow(df)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query2")
+  df2 <- read.csv(filename2)
+  lengthdf2 <- nrow(df2)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query3")
+  df3 <- read.csv(filename3)
+  lengthdf3 <- nrow(df3)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Query4")
+  df4 <- read.csv(filename4)
+  lengthdf4 <- nrow(df4)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Merged")
+  total <- read.csv(filename4)
+  lengttotal <- nrow(total)
+  
+  na_value <- sum(is.na(total$selftext))
+  #add to list
+  na_list[[i]] <- paste(na_value)
+  file_list[[i]] <- paste(filename)
+  Total[[i]] <- paste(lengttotal)
+  Query1[[i]] <- paste(lengthdf)
+  Query2[[i]] <- paste(lengthdf2)
+  Query3[[i]] <- paste(lengthdf3)
+  Query4[[i]] <- paste(lengthdf4)
+  
+}
+
+#merge
+AllCounts <- do.call(rbind, Map(data.frame, NAValues = na_list, FileName = file_list,Total = Total,Query1=Query1,Query2=Query2,Query3=Query3,Query4=Query4))
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+
+#convert to numeric for calculation
+AllCounts$Total <- as.numeric(AllCounts$Total)
+AllCounts$Query1 <- as.numeric(AllCounts$Query1)
+AllCounts$Query2 <- as.numeric(AllCounts$Query2)
+AllCounts$Query3 <- as.numeric(AllCounts$Query3)
+AllCounts$Query4 <- as.numeric(AllCounts$Query4)
+#check if added okay
+AllCounts$Check <- AllCounts$Query1 + AllCounts$Query2 + AllCounts$Query3+ AllCounts$Query4
+all.equal(AllCounts$Total,AllCounts$Check)
+#true so merge has been ok
+write.csv(AllCounts, file = "NumbersAllQueriesSubmissions.csv")
+
+#average!
+Total <- mean(AllCounts$Total)
+Query1 <- mean(AllCounts$Query1)
+Query2 <- mean(AllCounts$Query2)
+Query3 <- mean(AllCounts$Query3)
+Query4 <- mean(AllCounts$Query4)
+
+
+#--------------------------------------------------------
+#Merge all files together
+#--------------------------------------------------------
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+#read in"
+df <- read.csv("Merge.csv")
+#remove all rows but keep column names
+Total <- df[0,]
+Total1 <- Total %>%
+  mutate_all(as.character)
+
+#check what columns data has
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+test <- read.csv("2020_51.csv")
+#they're the same! but specification differs from time to time so convert the columns in the loop
+
+#--------------------------------------------------------
+#Merge all files together
+#--------------------------------------------------------
+filesMerge <- list.files(path="/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Merged", pattern = "*.csv")
+
+for (i in seq_along(filesMerge)) {
+  filename = filesMerge[[i]]
+  # Read data in
+  setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions/Merged")
+  df <- read_csv(filename)
+  #convert columns
+  df <- df %>%
+    mutate_all(as.character)
+  Total1 <- rbind(Total1, df)
+}
+
+#check if all went well 
+sum(AllCounts$Check)
+#1,259,745
+nrow(Total1)
+#1,259,745
+#save
+setwd("/Users/vicky/Desktop/Dissertation/Data/Reddit/Submissions")
+write_csv(Total1, file = "SubmissionsFinalCleaningFile.csv")
+
+
+
+

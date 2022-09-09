@@ -1,0 +1,25 @@
+
+from textblob import TextBlob
+
+import numpy as np
+import pandas as pd
+import os
+
+#loop
+os.chdir('/content/drive/MyDrive/TextBlob/')
+df = pd.read_csv('FinalRedditSubmissions.csv')
+df.head()
+
+list_columns = ['NOemojiTxt','EmojiText','LemEmojitxt','LemNOEmojitxt','StemEmojitxt','StemNOEmojitxt']
+
+for x in list_columns:
+  #load the descriptions into textblob
+  print(x)
+  desc_blob = [TextBlob(desc) for desc in df[x]]
+  pol = "Score"+str(x)
+  subs = str(x) + "Subj"
+  #add the sentiment metrics to the dataframe
+  df[pol] = [b.sentiment.polarity for b in desc_blob]
+  df[subs] = [b.sentiment.subjectivity for b in desc_blob]
+
+df.to_csv("TxtBlbSUbmissions.csv", header=True)

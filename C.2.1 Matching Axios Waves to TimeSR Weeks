@@ -1,0 +1,62 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios Ipsos Covid Indexd")
+library("readxl")
+#read in Dates of TimeSeries and Waves Dates
+TimeSRDates <- read_excel("TimeSR dates.xlsx")
+WavesDates <- read_excel("Waves with all Interview dates.xlsx")
+
+#---------------------------------
+#use of Thursday as middle to determine week
+#--------------------------------
+
+#set to vector and as date
+vectorWaveDates <- WavesDates$Middle_Day_Wave
+vectorWaveDates <- as.Date(vectorWaveDates)
+
+#set to date
+TimeSRDates$Thu_Middle_of_Week <- as.Date(TimeSRDates$Thu_Middle_of_Week)
+#find smallest difference date between thursday of week and second interview date
+TimeSRDates$WaveDate <- unlist(lapply(TimeSRDates$Thu_Middle_of_Week,function(x) as.character(vectorWaveDates[which.min(abs(x - vectorWaveDates))])))
+
+#set everything to date
+TimeSRDates$WaveDate <- as.Date(TimeSRDates$WaveDate)
+WavesDates$WaveDate <-WavesDates$Middle_Day_Wave
+WavesDates$WaveDate <- as.Date(WavesDates$WaveDate)
+
+#merge datasets
+total2 <- merge(WavesDates,TimeSRDates,by="WaveDate",all=TRUE)
+total3 <- merge(WavesDates,TimeSRDates,by="WaveDate",all.y=TRUE)
+
+#savedataset
+FinalTrial <- select(total3, c(TimeSR, datesMondays, Thu_Middle_of_Week, Wave, WaveDate))
+write.csv(FinalTrial, file = "AxiosWaveInfoSR.csv")
+
+
+#---------------------------------
+#use of Monday of TimeSR to determine week
+#--------------------------------
+TimeSRDates2 <- TimeSRDates
+
+#set to date
+TimeSRDates2$datesMondays <- as.Date(TimeSRDates2$datesMondays)
+#find smallest difference date
+TimeSRDates2$WaveDateMonday <- unlist(lapply(TimeSRDates2$datesMondays,function(x) as.character(vectorWaveDates[which.min(abs(x - vectorWaveDates))])))
+
+#set everything to date
+TimeSRDates2$WaveDateMonday <- as.Date(TimeSRDates2$WaveDateMonday)
+WavesDates$WaveDateMonday <-WavesDates$Middle_Day_Wave
+WavesDates$WaveDateMonday <- as.Date(WavesDates$WaveDateMonday)
+
+#merge datasets
+totalMonday2 <- merge(WavesDates,TimeSRDates2,by="WaveDateMonday",all=TRUE)
+totalMonday3 <- merge(WavesDates,TimeSRDates2,by="WaveDateMonday",all.y=TRUE)
+
+#savedataset
+FinalTrialMondays <- select(totalMonday3, c(TimeSR, datesMondays, Wed_Middle_of_Week, Wave, WaveDateMonday))
+write.csv(FinalTrialMondays, file = "AxiosWaveInfoSRMondaysofWeek.csv")
+
+

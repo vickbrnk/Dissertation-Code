@@ -1,0 +1,175 @@
+library("reshape2")
+library("ggplot2")
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#-----------------------------------------------
+#Syrvey and Rc
+#-----------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson/Survey & SMD")
+df <- read.csv("TnqCoefficients.csv")
+
+#-how many stat sig
+statsig <- df[df$p_value< 0.05,]
+nrow(statsig)
+nrow(statsig)/360
+
+#average correlation coef
+avg <- mean(df$corr_coeff)
+print(avg)
+#-0.7659658
+mini <- min(df$corr_coeff)
+print(mini)
+#-0.9392251
+maxi <- max(df$corr_coeff)
+print(maxi)
+#-0.3074417
+
+
+#-----------------------------------------------
+#Lets try HeatMap
+#-----------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Pearson/Survey & SMD")
+df <- read.csv("RcCoefficients.csv")
+df2 <- read.csv("RsCoefficients.csv")
+df3 <- read.csv("TnqCoefficients.csv")
+df4 <- read.csv("TqCoefficients.csv")
+
+
+#----------------------------------------------- grouping columns
+df$Lexicon <- df$Name_SMD
+#df
+df$Lexicon <- gsub("Rs_", "", df$Lexicon)
+df$Lexicon <- gsub("Rc_", "", df$Lexicon)
+df$Lexicon <- gsub("Tnq_", "", df$Lexicon)
+df$Lexicon <- gsub("Tq_", "", df$Lexicon)
+df$Lexicon <- gsub("_LemNoEm", "", df$Lexicon)
+df$Lexicon <- gsub("_LemEm", "", df$Lexicon)
+df$Lexicon <- gsub("_StemNoEm", "", df$Lexicon)
+df$Lexicon <- gsub("_StemEm", "", df$Lexicon)
+df$Lexicon <- gsub("_NoEm", "", df$Lexicon)
+df$Lexicon <- gsub("_Em", "", df$Lexicon)
+df$Lexicon <- gsub("WT_", "", df$Lexicon)
+
+df$Lexicon <- gsub("Afinn", "AFINN", df$Lexicon)
+df$Lexicon <- gsub("Vader", "VADER", df$Lexicon)
+df$Lexicon <- gsub("Bing", "BING", df$Lexicon)
+df$Lexicon <- gsub("Nrc", "NRC", df$Lexicon)
+#--------------------------------------------------------
+
+df$DataSource <- df$Name_SMD
+
+df$DataSource <- gsub("_AFINN_", "", df$DataSource)
+df$DataSource <- gsub("_Afinn_", "", df$DataSource)
+df$DataSource <- gsub("_Bing_", "", df$DataSource)
+df$DataSource <- gsub("_Nrc_", "", df$DataSource)
+df$DataSource <- gsub("_VADER_", "", df$DataSource)
+df$DataSource <- gsub("_Vader_", "", df$DataSource)
+df$DataSource <- gsub("_TxtBlb_", "", df$DataSource)
+df$DataSource <- gsub("_NRC_", "", df$DataSource)
+df$DataSource <- gsub("LemNoEm", "", df$DataSource)
+df$DataSource <- gsub("LemEm", "", df$DataSource)
+df$DataSource <- gsub("StemNoEm", "", df$DataSource)
+df$DataSource <- gsub("StemEm", "", df$DataSource)
+df$DataSource <- gsub("NoEm", "", df$DataSource)
+df$DataSource <- gsub("Em", "", df$DataSource)
+df$DataSource <- gsub("WT_", "", df$DataSource)
+
+#--------------------------------------------------------
+df$PrePro <- df$Name_SMD
+
+df$PrePro <- gsub("_AFINN_", "", df$PrePro)
+df$PrePro <- gsub("_Afinn_", "", df$PrePro)
+df$PrePro <- gsub("_Bing_", "", df$PrePro)
+df$PrePro <- gsub("_Nrc_", "", df$PrePro)
+df$PrePro <- gsub("NRC", "", df$PrePro)
+df$PrePro <- gsub("_VADER_", "", df$PrePro)
+df$PrePro <- gsub("_Vader_", "", df$PrePro)
+df$PrePro <- gsub("_TxtBlb_", "", df$PrePro)
+df$PrePro <- gsub("Rs", "", df$PrePro)
+df$PrePro <- gsub("Rc", "", df$PrePro)
+df$PrePro <- gsub("Tnq", "", df$PrePro)
+df$PrePro <- gsub("Tq", "", df$PrePro)
+df$PrePro <- gsub("_", "", df$PrePro)
+df$PrePro <- gsub("WT", "WT_", df$PrePro)
+#-----------------------------------------------renamesurvey
+df$Name_Survey <- gsub("AXIOS", "AICI", df$Name_Survey )
+df$Name_Survey <- gsub("Axios", "AICI", df$Name_Survey )
+df$Name_Survey <- gsub("SentimentTotal", "all", df$Name_Survey )
+df$index <- 1:nrow(df)
+df$SMD <- paste(df$index ,df$Name_SMD)
+
+df2$Name_Survey <- gsub("AXIOS", "AICI", df2$Name_Survey )
+df2$Name_Survey <- gsub("Axios", "AICI", df2$Name_Survey )
+df2$Name_Survey <- gsub("SentimentTotal", "all", df2$Name_Survey )
+
+df3$Name_Survey <- gsub("AXIOS", "AICI", df3$Name_Survey )
+df3$Name_Survey <- gsub("Axios", "AICI", df3$Name_Survey )
+df3$Name_Survey <- gsub("SentimentTotal", "all", df3$Name_Survey )
+
+df4$Name_Survey <- gsub("AXIOS", "AICI", df4$Name_Survey )
+df4$Name_Survey <- gsub("Axios", "AICI", df4$Name_Survey )
+df4$Name_Survey <- gsub("SentimentTotal", "all", df4$Name_Survey )
+
+write_csv(df, "RcNew.csv")
+write_csv(df2, "RsNew.csv")
+write_csv(df3, "TnqNew.csv")
+write_csv(df4, "TqNew.csv")
+#-----------------------------------------------NOW PLOT
+#re-order the y -axis
+df$Name_SMD <- as.factor(df$Name_SMD)
+
+# check the current levels
+levels(df$Name_SMD)
+# reorder the levels
+df$Name_SMD <- factor(df$Name_SMD, levels = levels(df$Name_SMD)[c(1:6, 31:36, 7:12, 37:42,13:18, 43:48,19:24, 49:54,25:30, 55:60)])
+levels(df$Name_SMD)
+#
+ggplot(df, aes(x = Name_Survey, y = Name_SMD, fill = p_value)) +
+  geom_tile()+ 
+  scale_fill_gradient(low = "#FFFFCC", high = "#FF0000") 
+#-----------------------------------------------NOW PLOT
+df2$Name_SMD <- as.factor(df2$Name_SMD)
+
+# check the current levels
+levels(df2$Name_SMD)
+# reorder the levels
+df2$Name_SMD <- factor(df2$Name_SMD, levels = levels(df2$Name_SMD)[c(1:6, 31:36, 7:12, 37:42,13:18, 43:48,19:24, 49:54,25:30, 55:60)])
+levels(df2$Name_SMD)
+
+ggplot(df2, aes(x = Name_Survey, y = Name_SMD, fill = p_value)) +
+  geom_tile()+ 
+  scale_fill_gradient(low = "#FFFFCC", high = "#FF0000") 
+
+#-----------------------------------------------NOW PLOT
+
+df3$Name_SMD <- as.factor(df3$Name_SMD)
+
+# check the current levels
+levels(df3$Name_SMD)
+# reorder the levels
+df3$Name_SMD <- factor(df3$Name_SMD, levels = levels(df3$Name_SMD)[c(1:6, 31:36, 7:12, 37:42,13:18, 43:48,19:24, 49:54,25:30, 55:60)])
+levels(df3$Name_SMD)
+
+ggplot(df3, aes(x = Name_Survey, y = Name_SMD, fill = p_value)) +
+  geom_tile()+ 
+  scale_fill_gradient(low = "#FFFFCC", high = "#FF0000") 
+
+#-----------------------------------------------NOW PLOT
+df4$Name_SMD <- as.factor(df4$Name_SMD)
+
+# check the current levels
+levels(df4$Name_SMD)
+# reorder the levels
+df4$Name_SMD <- factor(df4$Name_SMD, levels = levels(df4$Name_SMD)[c(1:6, 31:36, 7:12, 37:42,13:18, 43:48,19:24, 49:54,25:30, 55:60)])
+levels(df4$Name_SMD)
+
+
+ggplot(df4, aes(x = Name_Survey, y = Name_SMD, fill = p_value)) +
+  geom_tile()+ 
+  scale_fill_gradient(low = "#FFFFCC", high = "#FF0000") 
+
+
+

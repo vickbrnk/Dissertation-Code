@@ -1,0 +1,44 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(lubridate)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+#two vectors with start and end dates
+datesMondays <- seq(as.Date('2020-12-14'), as.Date('2022-05-30'), by = 'weeks')
+datesNextMonday <- seq(as.Date('2020-12-21'), as.Date('2022-06-06'), by = 'weeks')
+
+name1Monday <- "datesMondays"
+name2Monday <- "datesNextMonday"
+#create dataframe
+df <- data.frame(datesMondays,datesNextMonday)
+names(df) <- c(name1Monday,name2Monday)
+
+# Twitter Format start_tweets = "2020-12-24T00:00:00Z"
+# Reddit Format int(dt.datetime(2021,2,1).timestamp()) so '2021,2,1'
+#get Twitterformat for looping
+df$TwitterdatesMondays <- as.character(df$datesMondays ,"%Y-%m-%d")
+df$TwitterdatesMondaysT <-  paste(df$TwitterdatesMondays,"T00:00:00Z",sep="")
+
+df$TwitterdatesNextMonday <- as.character(df$datesNextMonday ,"%Y-%m-%d")
+df$TwitterdatesNextMondayT <-  paste(df$TwitterdatesNextMonday,"T00:00:00Z",sep="")
+
+
+#get Reddit format for looping
+df$RedditdatesMonday <- as.character(df$datesMondays ,"%Y-%m-%d")
+df$RedditdatesNextMonday <- as.character(df$datesNextMonday ,"%Y-%m-%d")
+
+#for timestamp create separate column for all since reddit cannot read str like needed for int function
+df2<- df %>% mutate(RedyearMon = lubridate::year(df$RedditdatesMonday), 
+                RedmonthMon = lubridate::month(df$RedditdatesMonday), 
+                ReddayMon = lubridate::day(df$RedditdatesMonday),
+                RedyearMonNext = lubridate::year(df$RedditdatesNextMonday), 
+                RedmonthMonNext = lubridate::month(df$RedditdatesNextMonday), 
+                ReddayMonNext = lubridate::day(df$RedditdatesNextMonday))
+#subset
+df3 <- select(df2, -c(TwitterdatesMondays,TwitterdatesNextMonday,RedditdatesMonday,RedditdatesNextMonday))
+#save the file
+write.csv(df3, file = "MondaysandMondays.csv")
+
+

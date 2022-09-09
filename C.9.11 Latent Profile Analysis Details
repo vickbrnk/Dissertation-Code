@@ -1,0 +1,192 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#-----------------------------------------------
+#examine groupings in LPA for data source
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/DataSourceSummaries")
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/DataSourceSummaries", pattern = "*.csv")
+#to add for loops
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl copy.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/DataSourceSummaries")
+for (i in seq_along(files1)) {
+  filename = files1[[i]]
+  # Read data in
+  df <- read.csv(filename, header = TRUE)
+  
+  #take last column
+  df$last <- df[,ncol(df)]
+  #check frequency
+  n_occur <- data.frame(table(df$last))
+  biggerthan1 <- n_occur[n_occur$Freq>1,]
+  
+  store <- vector("list", "length" = length(biggerthan1$Var1))
+  filenames <- vector("list", "length" = length(biggerthan1$Var1))
+  
+  for(i in 1:nrow(biggerthan1)) {  # for-loop over rows
+    l <- vapply(biggerthan1$Var1, paste, collapse = ", ", character(1L))
+    i = 1
+    #select value that occurs more than once
+    for (z in  l){
+      
+      often <- df[df$last == paste(z),]
+      cell <- often[,1]
+      store[[i]] <- paste(cell)
+      filenames[[i]] <- paste(filename)
+      i = i+1
+    }
+  }
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, File_Name=filenames, Grouped=store))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge) 
+}
+
+test <- temp %>% group_by(File_Name) %>%
+  summarise(across(everything(), str_c, collapse=" "))
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Detailed LPA/")
+write_csv(test, "DataSourceGroupingsDetailes.csv")
+#merge it with the LPA original
+dff <- read_csv("LPAClassesDataSource.csv")
+dff$merge <- paste(dff$File_Name, ".csv", sep = "")
+test$merge <- test$File_Name
+
+Final <- merge(dff, test, by = "merge")
+write_csv(Final, "DataSourceLPAdetails.csv")
+
+#-----------------------------------------------
+#examine groupings in LPA for pre-processing
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Summaries of PreProcessing LPA/1 Done")
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Summaries of PreProcessing LPA/1 Done", pattern = "*.csv")
+#to add for loops
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl copy.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Summaries of PreProcessing LPA/1 Done")
+for (i in seq_along(files1)) {
+  filename = files1[[i]]
+  # Read data in
+  df <- read.csv(filename, header = TRUE)
+  
+  #take last column
+  df$last <- df[,ncol(df)]
+  #check frequency
+  n_occur <- data.frame(table(df$last))
+  biggerthan1 <- n_occur[n_occur$Freq>1,]
+  
+  store <- vector("list", "length" = length(biggerthan1$Var1))
+  filenames <- vector("list", "length" = length(biggerthan1$Var1))
+  
+  for(i in 1:nrow(biggerthan1)) {  # for-loop over rows
+    l <- vapply(biggerthan1$Var1, paste, collapse = ", ", character(1L))
+    i = 1
+    #select value that occurs more than once
+    for (z in  l){
+      
+      often <- df[df$last == paste(z),]
+      cell <- often[,1]
+      store[[i]] <- paste(cell)
+      filenames[[i]] <- paste(filename)
+      i = i+1
+    }
+  }
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, File_Name=filenames, Grouped=store))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge) 
+}
+
+test <- temp %>% group_by(File_Name) %>%
+  summarise(across(everything(), str_c, collapse=" "))
+
+test$merge <- paste(test$File_Name)
+test$merge <- gsub("sum ", "", test$merge)
+
+#merge it with the LPA original
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final")
+dff <- read_csv("LPAClassesPrePro.csv")
+dff$merge <- paste(dff$File_Name)
+
+
+Final <- merge(dff, test, by = "merge")
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Detailed LPA/")
+write_csv(Final, "Pre-ProcessingGroupingDone.csv")
+#-----------------------------------------------
+#examine groupings in LPA for  lexicon method
+#-----------------------------------------------
+#all files
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/Summaries")
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/Summaries", pattern = "*.csv")
+#to add for loops
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl copy.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/LPA/Weighted Method/Summaries")
+for (i in seq_along(files1)) {
+  filename = files1[[i]]
+  # Read data in
+  df <- read.csv(filename, header = TRUE)
+  
+  #take last column
+  df$last <- df[,ncol(df)]
+  #check frequency
+  n_occur <- data.frame(table(df$last))
+  biggerthan1 <- n_occur[n_occur$Freq>1,]
+  
+  store <- vector("list", "length" = length(biggerthan1$Var1))
+  filenames <- vector("list", "length" = length(biggerthan1$Var1))
+  
+  for(i in 1:nrow(biggerthan1)) {  # for-loop over rows
+    l <- vapply(biggerthan1$Var1, paste, collapse = ", ", character(1L))
+    i = 1
+    #select value that occurs more than once
+    for (z in  l){
+      
+      often <- df[df$last == paste(z),]
+      cell <- often[,1]
+      store[[i]] <- paste(cell)
+      filenames[[i]] <- paste(filename)
+      i = i+1
+    }
+  }
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, File_Name=filenames, Grouped=store))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge) 
+}
+}
+#-----------------------------------------------
+#merge all details together for the method comparison
+#-----------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Detailed LPA/")
+data1 <- read_csv("LPAClassesMethodRc.csv")
+data2 <- read_csv("LPAClassesMethodRs.csv")
+data3 <- read_csv("LPAClassesMethodTnq.csv")
+data4 <- read_csv("LPAClassesMethodTq.csv")
+
+try <- rbind(data1, data2)
+try2 <- rbind(try, data3)
+try3 <- rbind(try2, data4)
+
+#-----------------------------------------------
+
+#-----------------------------------------------
+test <- temp %>% group_by(File_Name) %>%
+  summarise(across(everything(), str_c, collapse=" "))
+
+#merge it with the LPA original
+try3$merge <- paste(try3$File_Name, ".csv", sep = "")
+try3$merge <- try3$merge
+
+test$merge <- test$File_Name
+
+Final <- merge(try3, test, by = "merge")
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Detailed LPA/")
+write_csv(Final, "LexiconMethodLPAdetails.csv")
+

@@ -1,0 +1,335 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+data <- read_csv("RcVADERSentiment.csv")
+
+data$week <- 1:nrow(data)
+data$week <- paste("wk", data$week, sep = "_")
+
+data2 <- select(data, -c(TimeSR,week))
+n <- data$week
+#reshpe
+data3 <- as.data.frame(t(data2[,]))
+colnames(data3) <-n
+
+#-----------------------------------------------
+#-----------------------------------------------
+#-----------------------------------------------
+library("mclust")
+data2 <- select(data, -c(TimeSR))
+
+#clustering
+bic <- mclustBIC(data3, G= 1:13)
+#plot
+plot(bic)
+#summary
+summary(bic)
+#fit model
+mod1 <- Mclust(data3, G= 1:13,
+               x= bic)
+#summar
+summary(mod1)
+#two in class 1, rest all singular class
+mod1$G
+#optimal classes is 11
+mod1$modelName
+#"EEI" is optimal model variant
+BIC <- mod1$BIC[-70:-1]
+
+cprob <- cbind(mod1$z, mod1$classification)
+cprob <- as.data.frame(cprob)
+mydf <- cbind(rownames(cprob), cprob)
+colnames(mydf) <- c("Data","prob (class 1)", "prob (class 2)", "prob (class 3)", "prob (class 4)", "prob (class 5)", "prob (class 6)", "prob (class 7)", "prob (class 8)", "prob (class 9)", "prob (class 10)", "prob (class 11)","class")
+
+#-----------------------------------------------
+#loop for summary of Pre-Processing Decisions
+#-----------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl.csv")
+
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs")
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rs", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq")
+files3 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tq", pattern = "*.csv")
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+files4 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq", pattern = "*.csv")
+
+#list for creation dataframe
+optclasses <- vector("list", "length" = length(files))
+optmodel <- vector("list", "length" = length(files))
+surveyname <- vector("list", "length" = length(files))
+BICCriterion <- vector("list", "length" = length(files))
+
+
+for (i in seq_along(files4)) {
+    filename = files4[[i]]
+    # Read data in
+    setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Tnq")
+    df <- read.csv(filename, header = TRUE)
+    
+    #reshape data
+    df$week <- 1:nrow(df)
+    df$week <- paste("wk", df$week, sep = "_")
+    
+    data2 <- select(df, -c(TimeSR,week))
+    n <- df$week
+    #reshpe
+    data3 <- as.data.frame(t(data2[,]))
+    colnames(data3) <-n
+    
+    #clustering
+    bic <- mclustBIC(data3, G= 1:15)
+
+    #fit model
+    mod1 <- Mclust(data3, G= 1:15,
+                   x= bic)
+
+    optclass <- mod1$G
+    #optimal classes is 11
+    optmod <- mod1$modelName
+    #"EEI" is optimal model variant
+    print(mod1$BIC)
+    
+    name <- paste("sum", filename)
+    cprob <- cbind(mod1$z, mod1$classification)
+    cprob <- as.data.frame(cprob)
+    mydf <- cbind(rownames(cprob), cprob)
+    colnames(mydf) <- c("Data","prob (class 1)", "prob (class 2)", "prob (class 3)", "prob (class 4)", "prob (class 5)", "prob (class 6)", "prob (class 7)", "prob (class 8)", "prob (class 9)", "prob (class 10)", "prob (class 11)","class")
+    setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Summaries of PreProcessing LPA")
+    write_csv(mydf, paste(name))
+
+    #paste values
+    optclasses[[1]] <- paste(optclass)
+    optmodel[[1]] <- paste(optmod)
+    surveyname[[1]] <- paste(filename)
+
+
+    #convert to dataframe
+    dfformerge <- do.call(rbind, Map(data.frame, File_Name=surveyname, Optimal_Classes=optclasses, OptimalModelVariant=optmodel))
+    #merge dataframe to template for merging
+    temp <- rbind(temp, dfformerge)
+  }
+
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+write_csv(temp, "LPAClassesPrePro.csv")
+
+
+#-----------------------------------------------
+#loop for comparison of Methods
+#-----------------------------------------------
+#first merge all  together and filter from there
+#loop by data source
+setwd("/Users/vicky/Desktop/Dissertation/Data/")
+temp <- read_csv("Method Template.csv")
+
+files1 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method/Rc", pattern = "*.csv")
+
+#5 files, 12 dedcisions so 60 in total
+for (i in seq_along(files1)) {
+  filename = files1[[i]]
+  # Read data in
+  setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted/Rc")
+  df <- read.csv(filename, header = TRUE)
+  temp <- merge(temp, df, by = "TimeSR")
+}
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method")
+write_csv(temp, "All Rc.csv")
+#-----------------------------------------------
+#loop for comparison of Methods
+#-----------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method/")
+df <- read_csv("All Rc.csv")
+
+#list for creation dataframe
+optclasses <- vector("list", "length" = length(1))
+optmodel <- vector("list", "length" = length(1))
+surveyname <- vector("list", "length" = length(1))
+BICCriterion <- vector("list", "length" = length(1))
+
+#we have Em, NoEm, LemEm, LemNoEm, StemEm, StemNoEm
+a = 2
+b = 14
+c = 26
+d = 38
+e = 50
+
+
+while (e < 62) {
+  df2 <- select(df,
+                c(a,
+                  b,
+                  c,
+                  d,
+                  e))
+  #reshape data
+  df2$week <- 1:nrow(df)
+  df2$week <- paste("wk", df2$week, sep = "_")
+  
+  data2 <- select(df2, -c(week))
+  n <- df2$week
+  #reshpe
+  data3 <- as.data.frame(t(data2[,]))
+  colnames(data3) <-n
+  
+  #clustering
+  bic <- mclustBIC(data3, G= 1:15)
+  
+  #fit model
+  mod1 <- Mclust(data3, G= 1:15,
+                 x= bic)
+  
+  optclass <- mod1$G
+  #optimal classes is 11
+  optmod <- mod1$modelName
+  #"EEI" is optimal model variant
+  print(mod1$BIC)
+  #dataframe
+  
+  name <- paste(colnames(df[,a]))
+  cprob <- cbind(mod1$z, mod1$classification)
+  cprob <- as.data.frame(cprob)
+  mydf <- cbind(rownames(cprob), cprob)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method/Summaries")
+  write_csv(mydf, paste(name,'.csv', sep = ""))
+  
+  #paste values
+  optclasses[[1]] <- paste(optclass)
+  optmodel[[1]] <- paste(optmod)
+  surveyname[[1]] <- paste(colnames(df[,a]))
+  
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, File_Name=surveyname, Optimal_Classes=optclasses, OptimalModelVariant=optmodel))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge)
+  
+  a = a+1
+  b = b+1
+  c = c+1
+  d = d+1
+  e = e+1
+}
+
+
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method")
+write_csv(temp, "LPAClassesMethodTnq.csv")
+
+#-----------------------------------------------
+#loop for comparison of Data Sources
+#-----------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method")
+df <- read.csv("All Rc.csv")
+df2 <- read.csv("All Rs.csv")
+df3 <- read.csv("All Tq.csv")
+df4 <- read.csv("All Tnq.csv")
+
+temp <- merge(df, df2, by = "TimeSR")
+temp <- merge(temp, df3, by = "TimeSR")
+temp <- merge(temp, df4, by = "TimeSR")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method")
+write_csv(temp, "All Sources Together.csv")
+
+test <- select(temp,
+              c(2,
+                62,
+                122,
+                182))
+#----------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data")
+temp <- read_csv("LPATempl.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method/")
+df <- read_csv("All Sources Together.csv")
+
+#list for creation dataframe
+optclasses <- vector("list", "length" = length(1))
+optmodel <- vector("list", "length" = length(1))
+surveyname <- vector("list", "length" = length(1))
+BICCriterion <- vector("list", "length" = length(1))
+
+#we have Em, NoEm, LemEm, LemNoEm, StemEm, StemNoEm
+a = 2
+b = 62
+c = 122
+d = 182
+
+
+while (d < 242) {
+  df2 <- select(df,
+                c(a,
+                  b,
+                  c,
+                  d))
+  #reshape data
+  df2$week <- 1:nrow(df)
+  df2$week <- paste("wk", df2$week, sep = "_")
+  
+  data2 <- select(df2, -c(week))
+  n <- df2$week
+  #reshpe
+  data3 <- as.data.frame(t(data2[,]))
+  colnames(data3) <-n
+  
+  #clustering
+  bic <- mclustBIC(data3, G= 1:15)
+  
+  #fit model
+  mod1 <- Mclust(data3, G= 1:15,
+                 x= bic)
+  
+  optclass <- mod1$G
+  #optimal classes is 11
+  optmod <- mod1$modelName
+  #"EEI" is optimal model variant
+  print(mod1$BIC)
+  #dataframe
+  
+  name <- paste(colnames(df[,a]))
+  cprob <- cbind(mod1$z, mod1$classification)
+  cprob <- as.data.frame(cprob)
+  mydf <- cbind(rownames(cprob), cprob)
+  setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method/DataSourceSummaries")
+  write_csv(mydf, paste(name,'.csv', sep = ""))
+  
+  #paste values
+  optclasses[[1]] <- paste(optclass)
+  optmodel[[1]] <- paste(optmod)
+  surveyname[[1]] <- paste(colnames(df[,a]))
+  
+  #convert to dataframe
+  dfformerge <- do.call(rbind, Map(data.frame, File_Name=surveyname, Optimal_Classes=optclasses, OptimalModelVariant=optmodel))
+  #merge dataframe to template for merging
+  temp <- rbind(temp, dfformerge)
+  
+  a = a+1
+  b = b+1
+  c = c+1
+  d = d+1
+
+}
+
+
+#missing values check
+sapply(temp , function(x) sum(is.na(x)))
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/Weighted Method")
+write_csv(temp, "LPAClassesDataSource.csv")
+

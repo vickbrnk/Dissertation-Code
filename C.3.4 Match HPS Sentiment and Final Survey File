@@ -1,0 +1,69 @@
+library(readxl)
+library(tidyverse)
+library(readxl)
+library(dplyr)
+setwd("/Users/vicky/Desktop/Dissertation/Data/Axios/")
+my_dataDates <- read_csv("AxiosWaveInfoSR.csv")
+AxiosSentiment <- read_csv("AllwavesFinalwSentiment.csv")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/HPS/")
+DatesHPS <- read_excel("weeksHPS.xlsx")
+
+#set to vector and as date
+vectorHPSdate <- DatesHPS$Middle_Date
+vectorHPSdate <- as.Date(vectorHPSdate)
+
+#set to date
+my_dataDates$Thu_Middle_of_Week <- as.Date(my_dataDates$Thu_Middle_of_Week)
+#find smallest difference date between thursday of week and second interview date
+my_dataDates$HPSmergeDate <- unlist(lapply(my_dataDates$Thu_Middle_of_Week,function(x) as.character(vectorHPSdate[which.min(abs(x - vectorHPSdate))])))
+
+#set everything to date
+my_dataDates$Thu_Middle_of_Week <- as.Date(my_dataDates$Thu_Middle_of_Week)
+my_dataDates$HPSmergeDate <-  as.Date(my_dataDates$HPSmergeDate)
+DatesHPS$Middle_Date <- as.Date(DatesHPS$Middle_Date)
+
+#rename some columns
+DatesHPS <-
+  DatesHPS %>% rename(HPSmergeDate = Middle_Date , HPSWeek = Week)
+
+DatesHPS$HPSmergeDate <- as.Date(DatesHPS$HPSmergeDate)
+my_dataDates$HPSmergeDate <-  as.Date(my_dataDates$HPSmergeDate)
+
+#merge hps to my_dataDates
+total3 <- merge(my_dataDates,DatesHPS,by="HPSmergeDate")
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+write.csv(total3, file = "AllSurveysMatchednoSentiment.csv")
+
+#--------------------------------------------------------
+#Match Sentiment
+#--------------------------------------------------------
+HPSSentiment <- read_csv("AllHPSwSentiment.csv")
+AxiosSentiment <- read_csv("AxioswavesFinalwSentiment.csv")
+
+#rename sentiment columns
+HPSSentiment <-
+  HPSSentiment %>% rename(HPSSentimentTotal = Sentiment, HPSWeek = week)
+
+#fix week value
+HPSSentiment$HPSWeek <- gsub(".xlsx","",HPSSentiment$HPSWeek)
+HPSSentiment$HPSWeek <- gsub("health5_week","",HPSSentiment$HPSWeek)
+HPSSentiment$HPSWeek <- gsub("health5a_week","",HPSSentiment$HPSWeek)
+
+AxiosSentiment <-
+  AxiosSentiment %>% rename(AxiosSentimentTotal = Sentiment)
+
+#axios merge
+total4 <- merge(total3,AxiosSentiment,by="Wave")
+#axios merge
+total5 <- merge(total4,HPSSentiment,by="HPSWeek")
+write.csv(total5, file = "AllSurveysDetailsMatched.csv")
+#--------------------------------------------------------
+#clean Save
+#--------------------------------------------------------
+NewClean <- select(total5, c(TimeSR,HPSWeek,Wave,HPSSentimentTotal,AxiosSentimentTotal))
+#add week variable
+NewClean$week <- 1:nrow(NewClean)
+write.csv(NewClean, file = "FinalAllSurveysDetails.csv")
+

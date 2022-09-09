@@ -1,0 +1,152 @@
+library(readxl)
+library(tidyverse)
+library(readxl)
+library(dplyr)
+setwd("/Users/vicky/Desktop/Dissertation/Data/HPS/untilweek28")
+#test runs
+my_data <- read_excel("health5_week22.xlsx", sheet = "US",skip = 6)
+my_data <-
+  my_data %>% rename(defget ="Will definitely get a vaccine" , probget = "Will probably get a vaccine" , probnotget = "Will probably not get a vaccine",defnot = "Will definitely not get a vaccine")
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT until week 28
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/HPS/untilweek28")
+
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/HPS/untilweek28", pattern = "*.xlsx")
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files))
+somewhatlikely <- vector("list", "length" = length(files))
+notlikely <- vector("list", "length" = length(files))
+defnotlikely <- vector("list", "length" = length(files))
+week <-vector("list", "length" = length(files))
+vaccinationstotalyes <- vector("list", "length" = length(files))
+unsure <- c(0,0,0,0,0,0)
+
+for (i in seq_along(files)) {
+  filename = files[[i]]
+  # Read data in
+  df <- read_excel(filename, sheet = "US",skip = 6)
+  #rename columns
+  my_data <-
+    df %>% rename(defget ="Will definitely get a vaccine" , probget = "Will probably get a vaccine" , probnotget = "Will probably not get a vaccine",defnot = "Will definitely not get a vaccine")
+
+  #get count of all answers
+  #getvaccine
+  getvaccine <- my_data$Total...3[2]
+  
+  #defget vaccine
+  defget <- my_data$defget[2]
+  
+  #prob get
+  probget <- my_data$probget[2]
+  
+  #prob not
+  notprob <- my_data$probnotget[2]
+  
+  #deffo not
+  defnot <- my_data$defnot[2]
+  
+  #add to list
+  week[[i]] <- paste(filename)
+  vaccinationstotalyes[[i]] <- paste(getvaccine)
+  verylikely[[i]] <- paste(defget)
+  somewhatlikely[[i]] <- paste(probget)
+  notlikely[[i]] <- paste(notprob)
+  defnotlikely[[i]] <- paste(defnot)
+
+}
+#merge
+Untilweek28 <- do.call(rbind, Map(data.frame, week = week, Vaccinated = vaccinationstotalyes, Unsure =unsure, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely))
+
+
+#--------------------------------------------------------
+#GET THE SENTIMENT after week 28
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/HPS/after28")
+#test runs
+my_data2 <- read_excel("health5a_week42.xlsx", sheet = "US",skip = 6)
+my_data <-
+  my_data %>% rename(defget ="Will definitely get a vaccine" , probget = "Will probably get a vaccine" , probnotget = "Will probably not get a vaccine",defnot = "Will definitely not get a vaccine", unsure = "Unsure about getting a vaccine")
+
+
+
+files2 <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/HPS/after28", pattern = "*.xlsx")
+#create lists to store extraxcted info
+verylikely <- vector("list", "length" = length(files2))
+somewhatlikely <- vector("list", "length" = length(files2))
+notlikely <- vector("list", "length" = length(files2))
+defnotlikely <- vector("list", "length" = length(files2))
+week <-vector("list", "length" = length(files2))
+vaccinationstotalyes <- vector("list", "length" = length(files2))
+unsureget <- vector("list", "length" = length(files2))
+
+for (i in seq_along(files2)) {
+  filename = files2[[i]]
+  # Read data in
+  df <- read_excel(filename, sheet = "US",skip = 6)
+  #rename columns
+  my_data <-
+    df %>% rename(defget ="Will definitely get a vaccine" , probget = "Will probably get a vaccine" , probnotget = "Will probably not get a vaccine",defnot = "Will definitely not get a vaccine", unsure = "Unsure about getting a vaccine")
+  
+  #get count of all answers
+  #getvaccine
+  getvaccine <- my_data$Total...3[2]
+  
+  #defget vaccine
+  defget <- my_data$defget[2]
+  
+  #prob get
+  probget <- my_data$probget[2]
+  
+  #prob not
+  notprob <- my_data$probnotget[2]
+  
+  #deffo not
+  defnot <- my_data$defnot[2]
+  
+  #unsure
+  unsure1 <- my_data$unsure[2]
+  
+  #add to list
+  week[[i]] <- paste(filename)
+  vaccinationstotalyes[[i]] <- paste(getvaccine)
+  verylikely[[i]] <- paste(defget)
+  somewhatlikely[[i]] <- paste(probget)
+  notlikely[[i]] <- paste(notprob)
+  defnotlikely[[i]] <- paste(defnot)
+  unsureget[[i]] <- paste(unsure1)
+  
+}
+#merge
+afterweek28 <- do.call(rbind, Map(data.frame, week = week, Vaccinated = vaccinationstotalyes, Unsure =unsureget, Vlikely = verylikely, SMLikely= somewhatlikely, NotLikely= notlikely, DefnoLikely = defnotlikely))
+
+#--------------------------------------------------------
+#Final steps and sentiment calculation
+#--------------------------------------------------------
+#merge
+total <- rbind(Untilweek28,afterweek28)
+
+#make numeric
+total$Vaccinated = as.numeric(total$Vaccinated)
+total$Vlikely = as.numeric(total$Vlikely)
+total$SMLikely = as.numeric(total$SMLikely )
+total$NotLikely = as.numeric(total$NotLikely)
+total$DefnoLikely = as.numeric(total$DefnoLikely)
+total$Unsure = as.numeric(total$Unsure)
+
+str(total)
+total$Total <- total$Vaccinated+total$Vlikely+total$SMLikely+total$NotLikely+total$DefnoLikely+total$Unsure
+
+#--------------------------------------------------------
+#SENTIMENT CALCULATION
+#--------------------------------------------------------
+
+total$Sentiment <-((1*total$Vaccinated)+(0.95*total$Vlikely )+(0.5*total$Unsure)+(0.75*total$SMLikely)+(0.25*total$NotLikely)+(0.05*total$DefnoLikely))/(total$Total)
+setwd("/Users/vicky/Desktop/Dissertation/Data/HPS")
+write.csv(total, file = "AllHPSwSentiment.csv")
+
+
+
+

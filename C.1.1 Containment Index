@@ -1,0 +1,91 @@
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Restrictions")
+#read in data
+Response <- read.csv("covid-containment-and-health-index.csv")
+summary(Response)
+str(Response)
+#select the US
+USAResponse <- Response[Response$Code == "USA", ]  
+summary(USAResponse)
+str(USAResponse)
+#check duplicates and NA
+sum(duplicated(USAResponse))
+sapply(USAResponse , function(x) sum(is.na(x)))
+#None
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+USAResponse$DateCopy <- USAResponse$Day
+USAResponse$DateCopy <- as.Date(USAResponse$DateCopy,"%Y-%m-%d")
+USAResponse$Year <- format(USAResponse$DateCopy,"%G")
+USAResponse$week <- format(USAResponse$DateCopy,"%V")
+
+#--------------------------------------------------------
+#Create date column
+#--------------------------------------------------------
+#how many years
+unique(USAResponse$Year)
+#three years, 2022 2021 2020
+#separate these:
+USResp2020 <- USAResponse[USAResponse$Year == 2020, ]  
+USResp2021 <- USAResponse[USAResponse$Year == 2021, ] 
+USResp2022 <- USAResponse[USAResponse$Year == 2022, ] 
+
+#--------------------2020
+StringencyIndex2020 <- USResp2020 %>%
+  group_by(week) %>%
+  mutate(WKLContainmentIndex = mean(containment_index)) %>% 
+           ungroup()
+  
+#create a column for Year.Week
+StringencyIndex2020$TimeSR <- paste(StringencyIndex2020$Year, StringencyIndex2020$week, sep = ".")
+# subset
+StringencyIndex2020Fin <- select(StringencyIndex2020, c(TimeSR,WKLContainmentIndex))
+StringencyIndex2020Fin <- StringencyIndex2020Fin %>% distinct()
+
+
+#--------------------2021
+StringencyIndex2021 <- USResp2021 %>%
+  group_by(week) %>%
+  mutate(WKLContainmentIndex = mean(containment_index)) %>% 
+  ungroup()
+
+#create a column for Year.Week
+StringencyIndex2021$TimeSR <- paste(StringencyIndex2021$Year, StringencyIndex2021$week, sep = ".")
+# subset
+StringencyIndex2021Fin <- select(StringencyIndex2021, c(TimeSR,WKLContainmentIndex))
+StringencyIndex2021Fin <- StringencyIndex2021Fin %>% distinct()
+
+
+#--------------------2022
+StringencyIndex2022 <- USResp2022 %>%
+  group_by(week) %>%
+  mutate(WKLContainmentIndex = mean(containment_index)) %>% 
+  ungroup()
+
+#create a column for Year.Week
+StringencyIndex2022$TimeSR <- paste(StringencyIndex2022$Year, StringencyIndex2022$week, sep = ".")
+# subset
+StringencyIndex2022Fin <- select(StringencyIndex2022, c(TimeSR,WKLContainmentIndex))
+StringencyIndex2022Fin <- StringencyIndex2022Fin %>% distinct()
+
+
+#-------------------combine
+
+total <- rbind(StringencyIndex2020Fin,StringencyIndex2021Fin,StringencyIndex2022Fin)
+#quick NA and duplicate check and plot
+sum(duplicated(total))
+sapply(total , function(x) sum(is.na(x)))
+#no NA no duplicate
+#plot
+
+plot(total$TimeSR, total$WKLContainmentIndex)
+
+
+#--------------------------------------
+write.csv(total, file = "ContainmentUSA.csv")
+

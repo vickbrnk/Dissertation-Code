@@ -1,0 +1,60 @@
+library(academictwitteR)
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(foreign)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter/test/Official Try")
+#setup authorization token
+set_bearer()
+
+#Test pull of Tweets
+#read documentation https://github.com/cjbarrie/academictwitteR
+#https://developer.twitter.com/en/docs/twitter-api/tweets/search/integrate/build-a-query
+test1 <-
+  get_all_tweets(
+    query = "(vacc OR vaccinate OR immune OR vaccinate OR vax OR vaccine OR vacine OR immunization OR immunisation OR vaccines OR vaccination OR vaccinations OR vaccinated) (corona OR covid OR covid-19 OR covid19 OR pandemic) -is:retweet lang:en place_country:US",
+    start_tweets = "2020-12-14T00:00:00Z",
+    end_tweets = "2020-12-21T00:00:00Z",
+    data_path = "test1",
+    bind_tweets = FALSE,
+    file = "Test1",
+    n = 200000,
+  )
+#if end_tweets = "2020-12-26T00:00:00Z" then all are collected until 00:00:00
+#he did 200,000 per week
+test10 <- bind_tweets(data_path = "test1",output_format = "tidy")
+
+write.csv(test10, file = "test1.csv")
+
+#---------------------------------
+#loop through weekly dataframe
+#--------------------------------
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter/test/Loop it all")
+#read excel cus csv converts set data
+library("readxl")
+dates <- read_excel("MondaysandMondays.xls")
+#loop!
+for (row in 1:nrow(dates)) {
+  start <- dates[row, "TwitterdatesMondaysT"]
+  end  <- dates[row, "TwitterdatesNextMondayT"]
+  timeSR<- dates[row, "TimeSR"]
+  NameDF <- paste("week",timeSR, sep = "_")
+  get_all_tweets(
+    query = "(vacc OR vaccinate OR vaccine OR vaccinate OR vaccinated OR vaccinating OR vaccines OR vaccinates OR vax OR vaccine OR vaccination OR vaccinations OR vaccine OR immune OR immunisation OR immunise OR immunising OR immunisations OR immunises OR immunised OR immunization OR immunizations OR immunize OR immunized OR immunizes OR immunizing) (corona OR covid-19 OR sars-cov-2 OR coronavirus OR pandemic OR coronaviruses OR corona virus OR corona viruses OR coronavirus infections OR corona virus infections OR severe acute respiratory syndrome coronavirus OR severe acute respiratory syndrome corona virus OR SARS CoV-2 OR cov2 OR sars 2 OR covid OR coronavirus 2 OR corona virus 2 OR covid19 OR nCov OR new coronavirus OR new corona virus OR novel coronavirus OR novel corona virus OR coronaviruspandemic OR 2019ncov OR coronaoutbreak OR wuhanvirus) -is:retweet lang:en place_country:US -is:nullcast",
+    start_tweets = paste(start),
+    end_tweets = paste(end),
+    data_path = paste(timeSR),
+    bind_tweets = FALSE,
+    file = NameDF,
+    n = 200000,
+  )
+  x <- bind_tweets(data_path = paste(timeSR),output_format = "tidy")
+  write.csv(x, file = paste(timeSR,"csv", sep = "."))
+}
+
+
+
+

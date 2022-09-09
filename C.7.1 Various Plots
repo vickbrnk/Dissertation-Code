@@ -1,0 +1,130 @@
+library("reshape2")
+library("ggplot2")
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+
+#--------------------------------------------------------
+#Plot objective Measyres
+#--------------------------------------------------------
+
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final")
+dfobj <- read.csv("ObjMeasuresFinal.csv")
+
+AllObj <- select(dfobj, -c(X.1, TimeSR))
+
+df2Obj <- melt(AllObj ,  id.vars = 'X', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2Obj, aes(X,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(1e6, 1e6),
+           angle = 90, 
+           vjust = 1,pt.cex = 2)+theme(text = element_text(size = 22))
+
+
+#--------------------------------------------------------
+#PLOT RAW TWITTER
+#--------------------------------------------------------
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final")
+#read in data
+dfkkk <- read.csv("ObjMeasuresFinal.csv")
+df2k<- select(dfkkk, -c(X.1))
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final")
+dfTwit <- read.csv("NumofTweetsWeekly.csv")
+total <- merge(df2k,dfTwit, by="TimeSR")
+
+few<- select(total, c(X.x,WKLnew_deaths_smoothed,NumOfTweet))
+df4 <- melt(few ,  id.vars = 'X.x', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df4, aes(X.x,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                          x = c(4, 56),
+                          xintercept = c(4, 56),
+                          linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(5, 5),
+           angle = 90, 
+           vjust = 1)+theme(text = element_text(size = 22))
+
+#--------------------------------------------------------
+#Plot Survey Sentiments
+#--------------------------------------------------------
+
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Surveys")
+df <- read.csv("AllSentiment.csv")
+df$HPSall <- df$HPSSentimentTotal
+df$AICIall <- df$AxiosSentimentTotal
+df$AICIyd29 <- df$AXIOSyd29
+df$AICIyd44 <- df$AXIOSyd44
+
+
+All <- select(df, -c(Wave, X, HPSWeek, TimeSR,HPSSentimentTotal,AxiosSentimentTotal,AXIOSyd44,AXIOSyd29))
+
+df2 <- melt(All ,  id.vars = 'week', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(week,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Sentiment Score")+ annotate(geom = "vline",
+                                       x = c(4, 56),
+                                       xintercept = c(4, 56),
+                                       linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))
+
+
+#--------------------------------------------------------
+#Plot Volume
+#--------------------------------------------------------
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final")
+df <- read.csv("NewCounts.csv")
+df2 <- read.csv("ObjMeasuresFinal.csv")
+
+total <- merge(df, df2, by = "TimeSR")
+
+All <- select(total, c(CommentsCounts, SubmissionCounts, TwitterCounts, WKLnew_deaths_smoothed, X))
+
+df2 <- melt(All ,  id.vars = 'X', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df2, aes(X,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Value")+ annotate(geom = "vline",
+                                    x = c(4, 56),
+                                    xintercept = c(4, 56),
+                                    linetype = c("solid", "solid")) +
+  annotate(geom = "text",
+           label = c("2021", "2022"),
+           x = c(4, 56),
+           y = c(0.4, 0.4),
+           angle = 90, 
+           vjust = 1) +theme(text = element_text(size = 22))
+
+
+
+  

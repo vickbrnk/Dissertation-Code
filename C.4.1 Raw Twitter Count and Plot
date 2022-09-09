@@ -1,0 +1,62 @@
+
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+library(foreign)
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter/All csv files from loop")
+
+files <- list.files(path = "/Users/vicky/Desktop/Dissertation/Data/Twitter/All csv files from loop", pattern = "*.csv")
+#create lists to store extraxcted info
+data_list <- vector("list", "length" = length(files))
+file_list <- vector("list", "length" = length(files))
+
+for (i in seq_along(files)) {
+  filename = files[[i]]
+  # Read data in
+  df <- read.csv(filename, header = TRUE)
+  
+  # Extract length by counting a column (lang) in this case
+  length <- nrow(df)
+  # 
+  data_list[[i]] <- paste(length)
+  file_list[[i]] <- paste(filename)
+  
+}
+
+#merge
+test2 <-do.call(cbind, list(data_list, file_list))
+#convert to dataframe
+dfofTweets <- do.call(rbind, Map(data.frame, NumOfTweet=data_list, TimeSR=file_list))
+#add TimeSR column by removing the .csv and converting the _ to a period
+dfofTweets$TimeSR <- gsub(".csv", "", dfofTweets$TimeSR)
+dfofTweets$TimeSR <- sub('_','.',dfofTweets$TimeSR)
+str(dfofTweets)
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter")
+write.csv(dfofTweets, file = "NumofTweetsWeekly.csv")
+#average Tweet per week is 
+dfofTweets$NumOfTweet <- as.numeric(dfofTweets$NumOfTweet)
+averageTweetsWeekly <- mean(dfofTweets$NumOfTweet)
+#--------------------------------------------------------
+#TIMESERIES AND PLOT
+#--------------------------------------------------------
+
+#set wd
+setwd("/Users/vicky/Desktop/Dissertation/Data/Final")
+#read in data
+df <- read.csv("ObjMeasuresFinal.csv")
+df2<- select(df, -c(X.1))
+setwd("/Users/vicky/Desktop/Dissertation/Data/Twitter")
+dfTwit <- read.csv("NumofTweetsWeekly.csv")
+total <- merge(df2,dfTwit, by="TimeSR")
+
+few<- select(total, c(X.x,WKLnew_deaths_smoothed,NumOfTweet))
+df4 <- melt(few ,  id.vars = 'X.x', variable.name = 'series')
+
+# plot on same grid, each series colored differently -- 
+# good if the series have same scale
+ggplot(df4, aes(X.x,value)) + geom_line(aes(colour = series))+
+  xlab("Week")+
+  ylab("Value")

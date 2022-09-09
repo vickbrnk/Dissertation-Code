@@ -1,0 +1,34 @@
+library("reshape2")
+library("ggplot2")
+library(dplyr)
+library(tidyverse)
+library(mnormt)
+library(psych)
+
+#--------------------------------------------------------
+#Plot objective Measyres
+#--------------------------------------------------------
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/TxtBlb")
+dfobj <- read.csv("TxtBlbComments.csv")
+df2 <- read.csv("TxtBlbSUbmissions.csv")
+df3 <- read.csv("TxtBlbNOSource.csv")
+
+
+#examine weekly frequency
+df <- dfobj %>%
+  group_by(TimeSR) %>%
+  summarise(CommentsCounts = n()) 
+
+dfsec <- df2 %>%
+  group_by(TimeSR) %>%
+  summarise(SubmissionCounts = n()) 
+
+dfthr <- df3 %>%
+  group_by(TimeSR) %>%
+  summarise(TwitterCounts = n()) 
+
+total <- merge(df,dfsec, by = "TimeSR" )
+total1 <- merge(total,dfthr, by = "TimeSR" )
+
+setwd("/Users/vicky/Desktop/Dissertation/Data/1Final/")
+write_csv(total1, "NewCounts.csv")
