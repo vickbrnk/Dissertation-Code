@@ -1,6 +1,6 @@
 # Dissertation Code
 
-CSV Files = Contains CSV Files\
+CSV = Contains CSV Files\
 C.1 = Objective Measures \
 C.1.1 = Containment Index \
 C.1.2 = Merge CI and Objective Measures \
